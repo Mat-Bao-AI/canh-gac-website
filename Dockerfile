@@ -26,9 +26,8 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 RUN npx prisma generate
 RUN npm run build
 
-# Production runner image
-FROM node:20-alpine AS runner
-RUN apk add --no-cache libc6-compat openssl
+# Production runner image (reuse base stage with libc6-compat & openssl already installed)
+FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
