@@ -12,6 +12,7 @@ const updateWebsiteSchema = z.object({
   expectedStatusCode: z.number().int().optional(),
   expectedKeyword: z.string().optional().nullable(),
   responseThresholdMs: z.number().int().optional(),
+  repeatAlertHours: z.number().int().min(0).max(168).optional().nullable(),
   currentState: z.enum(["ACTIVE", "PAUSED"]).optional(),
 });
 

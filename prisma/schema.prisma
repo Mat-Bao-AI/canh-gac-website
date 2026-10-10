@@ -38,6 +38,7 @@ model UserSettings {
   emailEnabled          Boolean  @default(false) @map("email_enabled")
   alertDown             Boolean  @default(true) @map("alert_down")
   alertRecovery         Boolean  @default(true) @map("alert_recovery")
+  repeatAlertHours      Int      @default(1) @map("repeat_alert_hours") // 0 = tat, 1, 2, 3, 6, 12, 24 gio
   sslWarningDays        Int      @default(15) @map("ssl_warning_days")
   slowResponseEnabled   Boolean  @default(true) @map("slow_response_enabled")
   slowResponseThreshold Int      @default(2000) @map("slow_response_threshold")
@@ -58,6 +59,7 @@ model Website {
   checkInterval        Int       @default(300) @map("check_interval") // seconds
   expectedStatusCode   Int       @default(200) @map("expected_status_code")
   expectedKeyword      String?   @map("expected_keyword")
+  repeatAlertHours     Int?      @default(1) @map("repeat_alert_hours") // 0 = tat, 1, 2, 3... gio
   responseThresholdMs  Int       @default(2000) @map("response_threshold_ms")
   status               String    @default("UNKNOWN") // UP, DEGRADED, DOWN, UNKNOWN, PAUSED
   currentState         String    @default("ACTIVE") @map("current_state") // ACTIVE, PAUSED

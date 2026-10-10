@@ -263,6 +263,129 @@ async function processWebsiteCheck(websiteId: string) {
               logger.error(`Failed to send DOWN email alert for ${website.name}: ${err}`);
             }
           }
+        } else {
+          // Sự cố đang diễn ra (Website vẫn tiếp tục sập). Kiểm tra chu kỳ lặp lại cảnh báo (Repeat Alert)!
+          const repeatHours = website.repeatAlertHours ?? userSettings?.repeatAlertHours ?? 1;
+
+          if (repeatHours > 0) {
+            const lastAlert = await prisma.notificationHistory.findFirst({
+              where: {
+                websiteId: website.id,
+                incidentId: openIncident.id,
+                eventType: "DOWN",
+              },
+              orderBy: { sentAt: "desc" },
+            });
+
+            const repeatIntervalMs = repeatHours * 60 * 60 * 1000;
+            const lastAlertTime = lastAlert ? lastAlert.sentAt.getTime() : openIncident.startedAt.getTime();
+            const timeSinceLastAlert = now.getTime() - lastAlertTime;
+
+            if (timeSinceLastAlert >= repeatIntervalMs) {
+              const downtimeSeconds = Math.round((now.getTime() - openIncident.startedAt.getTime()) / 1000);
+              const downtimeText = formatDuration(downtimeSeconds);
+
+              logger.info(`Sending repeat alert for ${website.name}. Downtime so far: ${downtimeText}`);
+
+              const timeString = now.toLocaleTimeString("vi-VN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              });
+
+              // Send Repeat Telegram Alert
+              const botToken = userSettings?.telegramBotToken || process.env.TELEGRAM_BOT_TOKEN;
+              const chatId = userSettings?.telegramChatId || process.env.TELEGRAM_CHAT_ID;
+              const isTelegramEnabled = userSettings ? userSettings.telegramEnabled && userSettings.alertDown : true;
+
+              if (botToken && chatId && isTelegramEnabled) {
+                const msg = formatDownAlertTelegram({
+                  websiteName: website.name,
+                  url: website.url,
+                  httpStatus: result.httpStatus,
+                  errorMessage: result.errorMessage,
+                  timeString,
+                  incidentId: openIncident.id,
+                  appUrl: APP_URL,
+                  isRepeat: true,
+                  downtimeText,
+                  repeatHours,
+                });
+
+                const sendRes = await sendTelegramMessage({
+                  botToken,
+                  chatId,
+                  message: msg,
+                });
+
+                await prisma.notificationHistory.create({
+                  data: {
+                    websiteId: website.id,
+                    incidentId: openIncident.id,
+                    eventType: "DOWN",
+                    channel: "TELEGRAM",
+                    messageBody: msg,
+                    status: sendRes.success ? "SENT" : "FAILED",
+                    errorMessage: sendRes.error,
+                  },
+                });
+              }
+
+              // Send Repeat Email Alert
+              const smtpHost = userSettings?.smtpHost || process.env.SMTP_HOST || "smtp.gmail.com";
+              const smtpPort = userSettings?.smtpPort || Number(process.env.SMTP_PORT) || 587;
+              const smtpUser = userSettings?.smtpUser || process.env.SMTP_USER;
+              const smtpPass = userSettings?.smtpPass || process.env.SMTP_PASSWORD;
+              const isEmailEnabled = userSettings ? (userSettings.emailEnabled !== false && userSettings.alertDown !== false) : true;
+              const recipientEmail = website.user?.email || userSettings?.fromEmail || process.env.FROM_EMAIL || smtpUser;
+
+              if (isEmailEnabled && smtpHost && smtpUser && smtpPass && recipientEmail) {
+                try {
+                  const { subject, html } = formatDownAlertEmail({
+                    websiteName: website.name,
+                    url: website.url,
+                    cause: result.errorMessage || (result.httpStatus ? `Mã lỗi HTTP ${result.httpStatus}` : "Không thể kết nối"),
+                    timeString,
+                    retryCount: nextFailures,
+                    appUrl: APP_URL,
+                    isRepeat: true,
+                    downtimeText,
+                    repeatHours,
+                  });
+
+                  const emailRes = await sendSmtpEmail({
+                    config: {
+                      host: smtpHost,
+                      port: smtpPort,
+                      user: smtpUser,
+                      pass: smtpPass,
+                      from: smtpUser,
+                    },
+                    to: recipientEmail,
+                    subject,
+                    html,
+                  });
+
+                  await prisma.notificationHistory.create({
+                    data: {
+                      websiteId: website.id,
+                      incidentId: openIncident.id,
+                      eventType: "DOWN",
+                      channel: "EMAIL",
+                      messageBody: `[Email Nhắc lại] ${subject}`,
+                      status: emailRes.success ? "SENT" : "FAILED",
+                      errorMessage: emailRes.error,
+                    },
+                  });
+                } catch (err: unknown) {
+                  logger.error(`Failed to send repeat DOWN email alert for ${website.name}: ${err}`);
+                }
+              }
+            }
+          }
         }
       } else {
         // Still retrying: marked as DEGRADED or keep current DOWN

@@ -55,15 +55,30 @@ export function formatDownAlertTelegram(params: {
   timeString: string;
   incidentId: string;
   appUrl: string;
+  isRepeat?: boolean;
+  downtimeText?: string;
+  repeatHours?: number;
 }): string {
   const statusText = params.httpStatus ? `HTTP ${params.httpStatus}` : (params.errorMessage || "Không thể kết nối");
-  return `<b>[CẢNH BÁO: WEBSITE GẶP SỰ CỐ]</b>
+  const title = params.isRepeat
+    ? `⚠️ <b>[CẢNH BÁO NHẮC LẠI: SỰ CỐ VẪN ĐANG DIỄN RA]</b>`
+    : `🚨 <b>[CẢNH BÁO: WEBSITE GẶP SỰ CỐ]</b>`;
+
+  const repeatDetail = params.downtimeText
+    ? `\n• <b>Thời gian gián đoạn:</b> <code>${params.downtimeText}</code>`
+    : "";
+
+  const repeatInterval = params.repeatHours
+    ? `\n• <b>Chu kỳ nhắc lại:</b> Cứ mỗi ${params.repeatHours} giờ một lần`
+    : "";
+
+  return `${title}
 
 • <b>Website:</b> ${params.websiteName}
 • <b>URL:</b> ${params.url}
-• <b>Trạng thái:</b> <code>${statusText}</code>
+• <b>Trạng thái:</b> <code>${statusText}</code>${repeatDetail}
 • <b>Thời gian:</b> ${params.timeString}
-• <b>Mã sự cố:</b> <code>#${params.incidentId.slice(-7).toUpperCase()}</code>
+• <b>Mã sự cố:</b> <code>#${params.incidentId.slice(-7).toUpperCase()}</code>${repeatInterval}
 
 » <a href="${params.appUrl}/incidents">Xem chi tiết trên Canh Gác Website</a>`;
 }

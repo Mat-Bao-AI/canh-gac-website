@@ -26,6 +26,7 @@ export default function SettingsPage() {
 
   const [alertDown, setAlertDown] = useState(true);
   const [alertRecovery, setAlertRecovery] = useState(true);
+  const [repeatAlertHours, setRepeatAlertHours] = useState(1);
   const [sslWarningDays, setSslWarningDays] = useState(15);
   const [slowResponseEnabled, setSlowResponseEnabled] = useState(true);
   const [slowResponseThreshold, setSlowResponseThreshold] = useState(2000);
@@ -61,6 +62,7 @@ export default function SettingsPage() {
             setEmailEnabled(s.emailEnabled ?? false);
             setAlertDown(s.alertDown ?? true);
             setAlertRecovery(s.alertRecovery ?? true);
+            setRepeatAlertHours(s.repeatAlertHours ?? 1);
             setSslWarningDays(s.sslWarningDays ?? 15);
             setSlowResponseEnabled(s.slowResponseEnabled ?? true);
             setSlowResponseThreshold(s.slowResponseThreshold ?? 2000);
@@ -96,6 +98,7 @@ export default function SettingsPage() {
         emailEnabled,
         alertDown,
         alertRecovery,
+        repeatAlertHours: Number(repeatAlertHours),
         sslWarningDays: Number(sslWarningDays),
         slowResponseEnabled,
         slowResponseThreshold: Number(slowResponseThreshold),
@@ -535,6 +538,28 @@ export default function SettingsPage() {
                 onChange={(e) => setAlertRecovery(e.target.checked)}
                 className="w-4 h-4 rounded text-blue-600"
               />
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-slate-900">Tần suất nhắc lại cảnh báo khi website vẫn sập</p>
+                  <p className="text-slate-500">Gửi lại thông báo định kỳ nếu sự cố gián đoạn chưa được khắc phục</p>
+                </div>
+                <select
+                  value={repeatAlertHours}
+                  onChange={(e) => setRepeatAlertHours(Number(e.target.value))}
+                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-semibold text-slate-800"
+                >
+                  <option value={1}>Mỗi 1 giờ nhắc lại 1 lần (Khuyên dùng)</option>
+                  <option value={2}>Mỗi 2 giờ nhắc lại 1 lần</option>
+                  <option value={3}>Mỗi 3 giờ nhắc lại 1 lần</option>
+                  <option value={6}>Mỗi 6 giờ nhắc lại 1 lần</option>
+                  <option value={12}>Mỗi 12 giờ nhắc lại 1 lần</option>
+                  <option value={24}>Mỗi 24 giờ (1 ngày) nhắc lại 1 lần</option>
+                  <option value={0}>Tắt nhắc lại (Chỉ báo 1 lần duy nhất)</option>
+                </select>
+              </div>
             </div>
 
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">

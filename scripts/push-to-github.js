@@ -55,7 +55,7 @@ async function run() {
     sha = await git.commit({
       fs,
       dir,
-      message: 'feat(notifications): hoàn thiện gửi email SMTP cảnh báo sự cố tự động và trung tâm thông báo Header',
+      message: 'feat(rules): nghiêm ngặt hóa quy tắc HTTP 200 và tính năng lặp lại cảnh báo định kỳ khi sập',
       author: {
         name: 'babykajima47',
         email: 'admin@matbao.com'

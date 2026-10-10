@@ -26,6 +26,7 @@ const updateSettingsSchema = z.object({
   // Rules
   alertDown: z.boolean().optional(),
   alertRecovery: z.boolean().optional(),
+  repeatAlertHours: z.number().int().min(0).max(168).optional(),
   sslWarningDays: z.number().int().optional(),
   slowResponseEnabled: z.boolean().optional(),
   slowResponseThreshold: z.number().int().optional(),
@@ -60,6 +61,7 @@ export async function GET(req: NextRequest) {
           telegramEnabled: true,
           alertDown: true,
           alertRecovery: true,
+          repeatAlertHours: 1,
           sslWarningDays: 15,
           slowResponseEnabled: true,
           slowResponseThreshold: 2000,
@@ -150,6 +152,7 @@ export async function PATCH(req: NextRequest) {
     if (data.emailEnabled !== undefined) settingsUpdateData.emailEnabled = data.emailEnabled;
     if (data.alertDown !== undefined) settingsUpdateData.alertDown = data.alertDown;
     if (data.alertRecovery !== undefined) settingsUpdateData.alertRecovery = data.alertRecovery;
+    if (data.repeatAlertHours !== undefined) settingsUpdateData.repeatAlertHours = data.repeatAlertHours;
     if (data.sslWarningDays !== undefined) settingsUpdateData.sslWarningDays = data.sslWarningDays;
     if (data.slowResponseEnabled !== undefined) settingsUpdateData.slowResponseEnabled = data.slowResponseEnabled;
     if (data.slowResponseThreshold !== undefined) settingsUpdateData.slowResponseThreshold = data.slowResponseThreshold;

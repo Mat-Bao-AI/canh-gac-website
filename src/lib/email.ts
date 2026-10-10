@@ -77,6 +77,9 @@ export function formatDownAlertEmail({
   timeString,
   retryCount,
   appUrl,
+  isRepeat,
+  downtimeText,
+  repeatHours,
 }: {
   websiteName: string;
   url: string;
@@ -84,27 +87,47 @@ export function formatDownAlertEmail({
   timeString: string;
   retryCount: number;
   appUrl: string;
+  isRepeat?: boolean;
+  downtimeText?: string;
+  repeatHours?: number;
 }): { subject: string; html: string } {
-  const subject = `🚨 [CẢNH BÁO SỰ CỐ] Website ${websiteName} không thể truy cập!`;
+  const subject = isRepeat
+    ? `⚠️ [NHẮC LẠI SỰ CỐ] Website ${websiteName} vẫn đang gián đoạn (${downtimeText || "chưa phục hồi"})!`
+    : `🚨 [CẢNH BÁO SỰ CỐ] Website ${websiteName} không thể truy cập!`;
+
+  const bannerTitle = isRepeat
+    ? `⚠️ NHẮC LẠI: WEBSITE VẪN ĐANG GIÁN ĐOẠN`
+    : `🚨 PHÁT HIỆN SỰ CỐ WEBSITE GIÁN ĐOẠN`;
+
+  const introText = isRepeat
+    ? `Hệ thống xin nhắc lại: Website của bạn <b>vẫn đang gặp sự cố gián đoạn liên tục</b> (Thời gian đã sập: <b>${downtimeText || "kéo dài"}</b>):`
+    : `Hệ thống vừa phát hiện website của bạn không phản hồi sau <b>${retryCount}</b> lượt kiểm tra liên tiếp:`;
+
+  const repeatNote = repeatHours
+    ? `<div style="margin-top: 8px; font-size: 13px; color: #475569;"><b>Chu kỳ nhắc lại:</b> Cứ mỗi <b>${repeatHours} giờ</b> cho đến khi sự cố được khắc phục.</div>`
+    : "";
+
   const html = `
     <!DOCTYPE html>
     <html>
     <head><meta charset="utf-8"></head>
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 24px; color: #1e293b; margin: 0;">
       <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-        <div style="background: #e11d48; padding: 20px 24px; color: #ffffff;">
-          <h2 style="margin: 0; font-size: 18px; font-weight: 700;">🚨 PHÁT HIỆN SỰ CỐ WEBSITE GIÁN ĐOẠN</h2>
+        <div style="background: ${isRepeat ? "#ea580c" : "#e11d48"}; padding: 20px 24px; color: #ffffff;">
+          <h2 style="margin: 0; font-size: 18px; font-weight: 700;">${bannerTitle}</h2>
           <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Hệ thống giám sát 24/7 Canh Gác Website</p>
         </div>
         <div style="padding: 24px;">
-          <p style="margin-top: 0; font-size: 15px;">Hệ thống vừa phát hiện website của bạn không phản hồi sau <b>${retryCount}</b> lượt kiểm tra liên tiếp:</p>
+          <p style="margin-top: 0; font-size: 15px;">${introText}</p>
           <div style="background: #f1f5f9; border-radius: 12px; padding: 16px; margin: 16px 0; font-size: 14px; line-height: 1.6;">
             <div><b>Tên website:</b> ${websiteName}</div>
             <div><b>Địa chỉ URL:</b> <a href="${url}" style="color: #2563eb;">${url}</a></div>
-            <div><b>Thời gian phát hiện:</b> ${timeString}</div>
-            <div><b>Nguyên nhân ghi nhận:</b> <span style="color: #e11d48; font-weight: 600;">${cause}</span></div>
+            <div><b>Thời gian ghi nhận:</b> ${timeString}</div>
+            <div><b>Nguyên nhân:</b> <span style="color: #e11d48; font-weight: 600;">${cause}</span></div>
+            ${downtimeText ? `<div><b>Thời gian gián đoạn:</b> <span style="color: #ea580c; font-weight: 600;">${downtimeText}</span></div>` : ""}
+            ${repeatNote}
           </div>
-          <p style="font-size: 13px; color: #64748b;">Hệ thống sẽ tiếp tục theo dõi và tự động gửi thông báo phục hồi ngay khi website hoạt động trở lại.</p>
+          <p style="font-size: 13px; color: #64748b;">Vui lòng kiểm tra lại máy chủ hoặc tên miền của bạn để khắc phục sớm nhất.</p>
           <div style="margin-top: 24px; text-align: center;">
             <a href="${appUrl}/overview" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; font-size: 14px;">Xem chi tiết sự cố trên Dashboard</a>
           </div>

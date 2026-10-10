@@ -13,6 +13,7 @@ const createWebsiteSchema = z.object({
   expectedStatusCode: z.number().int().default(200),
   expectedKeyword: z.string().optional().nullable(),
   responseThresholdMs: z.number().int().default(2000),
+  repeatAlertHours: z.number().int().min(0).max(168).default(1),
   enableMonitoring: z.boolean().default(true),
 });
 
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { url, name, checkInterval, expectedStatusCode, expectedKeyword, responseThresholdMs, enableMonitoring } =
+    const { url, name, checkInterval, expectedStatusCode, expectedKeyword, responseThresholdMs, repeatAlertHours, enableMonitoring } =
       result.data;
 
     // 1. SSRF Protection Validation
@@ -148,6 +149,7 @@ export async function POST(req: NextRequest) {
         expectedStatusCode,
         expectedKeyword,
         responseThresholdMs,
+        repeatAlertHours: repeatAlertHours ?? 1,
         status: "UNKNOWN",
         statusReason: "Đang chờ worker thực hiện lượt kiểm tra đầu tiên",
         currentState: enableMonitoring ? "ACTIVE" : "PAUSED",

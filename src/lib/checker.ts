@@ -109,44 +109,11 @@ export async function executeWebsiteCheck(options: CheckOptions): Promise<CheckW
     }
 
     // Classification Rules according to Requirement 11
-    if (httpStatus >= 500) {
-      calculatedStatus = "DOWN";
-      errorMessage = `Máy chủ phản hồi mã lỗi HTTP ${httpStatus}`;
-      statusReason = `Lỗi máy chủ (HTTP ${httpStatus}) - Độ trễ ${responseTimeMs}ms`;
-      isSuccessful = false;
-    } else if (httpStatus === 408) {
-      calculatedStatus = "DOWN";
-      errorMessage = "Mã trạng thái HTTP 408 Request Timeout";
-      statusReason = "HTTP 408 Request Timeout";
-      isSuccessful = false;
-    } else if (httpStatus === 429) {
-      calculatedStatus = "DEGRADED";
-      errorMessage = "Mã trạng thái HTTP 429 Too Many Requests (Bị giới hạn tần suất)";
-      statusReason = "HTTP 429 Rate Limited";
-      isSuccessful = true;
-    } else if (httpStatus === 404) {
-      if (expectedStatusCode === 404) {
-        calculatedStatus = "UP";
-        statusReason = "HTTP 404 (Khớp kỳ vọng)";
-        isSuccessful = true;
-      } else {
-        calculatedStatus = "DEGRADED";
-        errorMessage = `HTTP 404 Not Found (Kỳ vọng: ${expectedStatusCode})`;
-        statusReason = `Không tìm thấy trang (HTTP 404 Not Found)`;
-        isSuccessful = false;
-      }
-    } else if (httpStatus === 401 || httpStatus === 403) {
-      if (expectedStatusCode === httpStatus) {
-        calculatedStatus = "UP";
-        statusReason = `HTTP ${httpStatus} (Khớp kỳ vọng)`;
-        isSuccessful = true;
-      } else {
-        calculatedStatus = "DEGRADED";
-        errorMessage = `HTTP ${httpStatus} Yêu cầu xác thực / Bị từ chối truy cập`;
-        statusReason = `Cần xác thực hoặc bị chặn quyền (HTTP ${httpStatus})`;
-        isSuccessful = true;
-      }
-    } else if (httpStatus >= 200 && httpStatus < 400) {
+    // Strict HTTP Status Validation:
+    // Mọi mã khác HTTP 200 (hoặc mã mong đợi chỉ định) đều tính là sự cố DOWN và phải kích hoạt cảnh báo!
+    const isTargetStatus = expectedStatusCode ? httpStatus === expectedStatusCode : httpStatus === 200;
+
+    if (isTargetStatus) {
       isSuccessful = true;
       calculatedStatus = "UP";
       statusReason = `HTTP ${httpStatus} OK - Độ trễ ${responseTimeMs}ms`;
@@ -164,7 +131,7 @@ export async function executeWebsiteCheck(options: CheckOptions): Promise<CheckW
       // Expected keyword validation
       if (expectedKeyword && expectedKeyword.trim().length > 0) {
         if (!responseBody.toLowerCase().includes(expectedKeyword.trim().toLowerCase())) {
-          calculatedStatus = "DEGRADED";
+          calculatedStatus = "DOWN";
           errorMessage = `Không tìm thấy từ khóa kỳ vọng "${expectedKeyword}"`;
           statusReason = `Thiếu từ khóa kỳ vọng "${expectedKeyword}"`;
           isSuccessful = false;
@@ -172,16 +139,38 @@ export async function executeWebsiteCheck(options: CheckOptions): Promise<CheckW
       }
 
       // Latency threshold
-      if (responseTimeMs > responseThresholdMs) {
+      if (responseTimeMs > responseThresholdMs && calculatedStatus === "UP") {
         calculatedStatus = "DEGRADED";
         errorMessage = `Phản hồi chậm (${responseTimeMs}ms > ngưỡng ${responseThresholdMs}ms)`;
         statusReason = `Tốc độ phản hồi chậm (${responseTimeMs}ms vượt ngưỡng ${responseThresholdMs}ms)`;
       }
     } else {
-      calculatedStatus = "DEGRADED";
-      errorMessage = `Mã trạng thái HTTP ${httpStatus}`;
-      statusReason = `HTTP ${httpStatus}`;
+      // Bất kỳ mã phản hồi nào khác 200 đều coi là DOWN (Sự cố cần cảnh báo)
       isSuccessful = false;
+      calculatedStatus = "DOWN";
+
+      if (httpStatus >= 500) {
+        errorMessage = `Máy chủ phản hồi mã lỗi HTTP ${httpStatus}`;
+        statusReason = `Lỗi máy chủ (HTTP ${httpStatus}) - Độ trễ ${responseTimeMs}ms`;
+      } else if (httpStatus === 404) {
+        errorMessage = `HTTP 404 Not Found (Không tìm thấy trang web)`;
+        statusReason = `Không tìm thấy trang (HTTP 404 Not Found)`;
+      } else if (httpStatus === 401 || httpStatus === 403) {
+        errorMessage = `HTTP ${httpStatus} Bị từ chối truy cập / Yêu cầu xác thực`;
+        statusReason = `Lỗi phân quyền hoặc bị chặn truy cập (HTTP ${httpStatus})`;
+      } else if (httpStatus === 408) {
+        errorMessage = `HTTP 408 Request Timeout`;
+        statusReason = `Hết thời gian yêu cầu (HTTP 408 Request Timeout)`;
+      } else if (httpStatus === 429) {
+        errorMessage = `HTTP 429 Too Many Requests (Bị chặn do quá nhiều yêu cầu)`;
+        statusReason = `Bị giới hạn tần suất truy cập (HTTP 429)`;
+      } else if (httpStatus >= 300 && httpStatus < 400) {
+        errorMessage = `Chuyển hướng chưa đến trang đích HTTP ${httpStatus}`;
+        statusReason = `Lỗi chuyển hướng (HTTP ${httpStatus})`;
+      } else {
+        errorMessage = `Mã trạng thái HTTP ${httpStatus} (Khác mã kỳ vọng ${expectedStatusCode || 200})`;
+        statusReason = `Phản hồi mã trạng thái bất thường HTTP ${httpStatus}`;
+      }
     }
   } catch (err: unknown) {
     clearTimeout(timeoutId);
