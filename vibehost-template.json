@@ -1,0 +1,77 @@
+{
+  "name": "Canh Gác Website",
+  "category": "Giám sát & An ninh mạng",
+  "description": "Nền tảng giám sát Uptime 24/7, phát hiện downtime sau 2 lần kiểm tra liên tiếp, cảnh báo hết hạn SSL trước 30/15/7/1 ngày, quét an ninh và cảnh báo đa kênh Telegram & Email.",
+  "iconUrl": "https://raw.githubusercontent.com/matbaogit/canh-gac-website/main/public/icon.png",
+  "source": {
+    "type": "git",
+    "repoUrl": "https://github.com/matbaogit/canh-gac-website",
+    "gitRef": "main",
+    "subdir": ""
+  },
+  "spec": {
+    "port": 3000,
+    "ram": "512MB",
+    "cpu": 0.5,
+    "healthPath": "/api/health"
+  },
+  "env": [
+    {
+      "key": "PORT",
+      "required": true,
+      "secret": false,
+      "generated": false,
+      "default": "3000"
+    },
+    {
+      "key": "AUTH_SECRET",
+      "required": true,
+      "secret": true,
+      "generated": true
+    },
+    {
+      "key": "DATABASE_URL",
+      "required": true,
+      "secret": false,
+      "generated": false,
+      "default": "file:/app/data/canhgac.db"
+    },
+    {
+      "key": "NEXT_PUBLIC_APP_URL",
+      "required": false,
+      "secret": false,
+      "generated": false,
+      "default": "http://localhost:3000"
+    },
+    {
+      "key": "MONITOR_WORKER_CONCURRENCY",
+      "required": false,
+      "secret": false,
+      "generated": false,
+      "default": "5"
+    },
+    {
+      "key": "TELEGRAM_BOT_TOKEN",
+      "required": false,
+      "secret": true,
+      "generated": false
+    },
+    {
+      "key": "TELEGRAM_CHAT_ID",
+      "required": false,
+      "secret": false,
+      "generated": false,
+      "default": ""
+    }
+  ],
+  "volumes": [
+    {
+      "containerPath": "/app/data",
+      "description": "Lưu trữ bền vững SQLite database và dữ liệu giám sát"
+    }
+  ],
+  "firstAdmin": {
+    "setupPath": "/register",
+    "description": "Mở /register để tạo tài khoản quản trị viên đầu tiên sau khi deploy"
+  }
+}

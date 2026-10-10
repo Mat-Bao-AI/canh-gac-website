@@ -1,0 +1,51 @@
+{
+  "name": "canh-gac-website",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "node server.js",
+    "start:next": "next start",
+    "setup": "bash setup.sh",
+    "package:zip": "node scripts/package-zip.js",
+    "push:github": "node scripts/push-to-github.js",
+    "worker": "tsx src/worker/index.ts",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "db:clear": "tsx scripts/clear-db.ts",
+    "seed": "tsx prisma/seed.ts",
+    "test": "tsx --test tests/core.test.ts",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.21.1",
+    "bcryptjs": "^2.4.3",
+    "clsx": "^2.1.1",
+    "dotenv": "^16.4.5",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.453.0",
+    "next": "14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.13.0",
+    "tailwind-merge": "^2.5.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/archiver": "^8.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^20.17.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "archiver": "^8.0.0",
+    "autoprefixer": "^10.4.20",
+    "isomorphic-git": "^1.43.3",
+    "postcss": "^8.4.47",
+    "prisma": "^5.21.1",
+    "tailwindcss": "^3.4.14",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}

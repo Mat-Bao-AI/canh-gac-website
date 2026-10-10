@@ -1,0 +1,213 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  avatar        String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  websites      Website[]
+  settings      UserSettings?
+
+  @@map("users")
+}
+
+model UserSettings {
+  id                    String   @id @default(cuid())
+  userId                String   @unique @map("user_id")
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  telegramBotToken      String?  @map("telegram_bot_token")
+  telegramChatId        String?  @map("telegram_chat_id")
+  telegramEnabled       Boolean  @default(true) @map("telegram_enabled")
+  smtpHost              String?  @map("smtp_host")
+  smtpPort              Int?     @default(587) @map("smtp_port")
+  smtpUser              String?  @map("smtp_user")
+  smtpPass              String?  @map("smtp_pass")
+  fromEmail             String?  @map("from_email")
+  emailEnabled          Boolean  @default(false) @map("email_enabled")
+  alertDown             Boolean  @default(true) @map("alert_down")
+  alertRecovery         Boolean  @default(true) @map("alert_recovery")
+  sslWarningDays        Int      @default(15) @map("ssl_warning_days")
+  slowResponseEnabled   Boolean  @default(true) @map("slow_response_enabled")
+  slowResponseThreshold Int      @default(2000) @map("slow_response_threshold")
+  defaultCheckInterval  Int      @default(300) @map("default_check_interval")
+  retryThreshold        Int      @default(2) @map("retry_threshold")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("user_settings")
+}
+
+model Website {
+  id                   String    @id @default(cuid())
+  userId               String    @map("user_id")
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                 String
+  url                  String
+  checkInterval        Int       @default(300) @map("check_interval") // seconds
+  expectedStatusCode   Int       @default(200) @map("expected_status_code")
+  expectedKeyword      String?   @map("expected_keyword")
+  responseThresholdMs  Int       @default(2000) @map("response_threshold_ms")
+  status               String    @default("UNKNOWN") // UP, DEGRADED, DOWN, UNKNOWN, PAUSED
+  currentState         String    @default("ACTIVE") @map("current_state") // ACTIVE, PAUSED
+  lastCheckedAt        DateTime? @map("last_checked_at")
+  lastSuccessAt        DateTime? @map("last_success_at")
+  lastFailureAt        DateTime? @map("last_failure_at")
+  lastResponseTime     Int?      @map("last_response_time")
+  lastHttpStatus       Int?      @map("last_http_status")
+  statusUpdatedAt      DateTime? @map("status_updated_at")
+  statusReason         String?   @map("status_reason")
+  nextCheckAt          DateTime? @map("next_check_at")
+  consecutiveFailures  Int       @default(0) @map("consecutive_failures")
+  
+  // SSL fields
+  sslValid             Boolean?  @map("ssl_valid")
+  sslExpirationDate    DateTime? @map("ssl_expiration_date")
+  sslIssuer            String?   @map("ssl_issuer")
+  sslDaysRemaining     Int?      @map("ssl_days_remaining")
+
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  checkLogs            CheckLog[]
+  incidents            Incident[]
+  alertConfigs         AlertConfig[]
+  notificationHistories NotificationHistory[]
+  securityScans        SecurityScan[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([lastCheckedAt])
+  @@map("websites")
+}
+
+model CheckLog {
+  id             String   @id @default(cuid())
+  websiteId      String   @map("website_id")
+  website        Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  checkedAt      DateTime @default(now()) @map("checked_at")
+  httpStatus     Int?     @map("http_status")
+  responseTimeMs Int      @map("response_time_ms")
+  dnsTimeMs      Int?     @map("dns_time_ms")
+  connectTimeMs  Int?     @map("connect_time_ms")
+  tlsTimeMs      Int?     @map("tls_time_ms")
+  ipAddress      String?  @map("ip_address")
+  finalUrl       String?  @map("final_url")
+  contentLength  Int?     @map("content_length")
+  isSuccessful   Boolean  @map("is_successful")
+  errorMessage   String?  @map("error_message")
+  sslValid       Boolean? @map("ssl_valid")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([websiteId])
+  @@index([checkedAt])
+  @@map("check_logs")
+}
+
+model Incident {
+  id                   String    @id @default(cuid())
+  websiteId            String    @map("website_id")
+  website              Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  startedAt            DateTime  @default(now()) @map("started_at")
+  resolvedAt           DateTime? @map("resolved_at")
+  durationSeconds      Int?      @map("duration_seconds")
+  cause                String
+  status               String    @default("OPEN") // OPEN, RESOLVED
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  notifications        NotificationHistory[]
+
+  @@index([websiteId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("incidents")
+}
+
+model AlertConfig {
+  id             String   @id @default(cuid())
+  websiteId      String   @map("website_id")
+  website        Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  channel        String   // TELEGRAM, EMAIL, WEBHOOK
+  destination    String?
+  retryThreshold Int      @default(2) @map("retry_threshold")
+  sslWarningDays Int      @default(15) @map("ssl_warning_days")
+  isEnabled      Boolean  @default(true) @map("is_enabled")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([websiteId])
+  @@map("alert_configs")
+}
+
+model NotificationHistory {
+  id           String    @id @default(cuid())
+  websiteId    String    @map("website_id")
+  website      Website   @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  incidentId   String?   @map("incident_id")
+  incident     Incident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  eventType    String    @map("event_type") // DOWN, RECOVERY, SSL_WARNING, ANOMALY, TEST
+  channel      String    @map("channel")    // TELEGRAM, EMAIL
+  messageBody  String    @map("message_body")
+  status       String    @default("SENT")   // SENT, FAILED
+  errorMessage String?   @map("error_message")
+  sentAt       DateTime  @default(now())    @map("sent_at")
+
+  @@index([websiteId])
+  @@index([sentAt])
+  @@map("notification_histories")
+}
+
+model SecurityScan {
+  id                   String   @id @default(cuid())
+  websiteId            String   @map("website_id")
+  website              Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  scannedAt            DateTime @default(now()) @map("scanned_at")
+  htmlHash             String?  @map("html_hash")
+  pageTitle            String?  @map("page_title")
+  metaDescription      String?  @map("meta_description")
+  hasAnomaly           Boolean  @default(false) @map("has_anomaly")
+  titleChanged         Boolean  @default(false) @map("title_changed")
+  metaChanged          Boolean  @default(false) @map("meta_changed")
+  suspiciousTagsFound  String?  @map("suspicious_tags_found") // JSON array or comma separated
+  suspiciousLinks      String?  @map("suspicious_links")      // JSON array
+  details              String?
+
+  @@index([websiteId])
+  @@index([scannedAt])
+  @@map("security_scans")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@map("password_reset_tokens")
+}
+
+model WorkerHeartbeat {
+  id                    String    @id @default("primary-worker")
+  workerStatus          String    @default("HEALTHY") @map("worker_status") // HEALTHY, DEGRADED, STOPPED
+  lastHeartbeatAt       DateTime  @default(now()) @map("last_heartbeat_at")
+  activeJobs            Int       @default(0) @map("active_jobs")
+  queueDepth            Int       @default(0) @map("queue_depth")
+  lastSuccessfulCheckAt DateTime? @map("last_successful_check_at")
+  startedAt             DateTime  @default(now()) @map("started_at")
+  uptimeSeconds         Int       @default(0) @map("uptime_seconds")
+
+  @@map("worker_heartbeats")
+}
