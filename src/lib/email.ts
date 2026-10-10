@@ -234,3 +234,78 @@ export function formatTestEmail({
   `;
   return { subject, html };
 }
+
+// 4. Template Email Cảnh báo An ninh / Dấu hiệu bất thường nội dung
+export function formatAnomalyAlertEmail({
+  websiteName,
+  url,
+  violatedRules,
+  details,
+  timeString,
+  appUrl,
+}: {
+  websiteName: string;
+  url: string;
+  violatedRules: string[];
+  details: string;
+  timeString: string;
+  appUrl: string;
+}): { subject: string; html: string } {
+  const subject = `🛡️ [CANH GÁC WEBSITE] CẢNH BÁO AN NINH: Phát hiện bất thường nội dung trên ${websiteName}`;
+  const rulesListHtml =
+    violatedRules.length > 0
+      ? violatedRules
+          .map(
+            (r) =>
+              `<li style="margin-bottom: 4px;"><span style="background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 12px;">VI PHẠM</span> <b>${r}</b></li>`
+          )
+          .join("")
+      : `<li>Quy tắc toàn vẹn nội dung website</li>`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 24px; color: #1e293b; margin: 0;">
+      <div style="max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #fecaca; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        <div style="background: #dc2626; padding: 20px 24px; color: #ffffff;">
+          <h2 style="margin: 0; font-size: 18px; font-weight: 700;">🛡️ CẢNH BÁO AN NINH: PHÁT HIỆN BẤT THƯỜNG NỘI DUNG</h2>
+          <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Hệ thống giám sát Defacement & Toàn vẹn Canh Gác Website</p>
+        </div>
+        <div style="padding: 24px;">
+          <p style="margin-top: 0; font-size: 15px;">Hệ thống phát hiện dấu hiệu can thiệp bất thường hoặc vi phạm quy tắc an ninh trên website của bạn:</p>
+          <div style="background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 8px; padding: 16px; margin: 16px 0; font-size: 14px; line-height: 1.6;">
+            <div><b>Tên website:</b> ${websiteName}</div>
+            <div><b>Địa chỉ URL:</b> <a href="${url}" style="color: #2563eb;">${url}</a></div>
+            <div><b>Thời gian quét:</b> ${timeString}</div>
+          </div>
+
+          <div style="margin: 20px 0;">
+            <div style="font-size: 14px; font-weight: 700; color: #991b1b; margin-bottom: 8px;">DANH SÁCH QUY TẮC VI PHẠM:</div>
+            <ul style="padding-left: 20px; margin: 0; font-size: 14px; color: #1e293b; line-height: 1.8;">
+              ${rulesListHtml}
+            </ul>
+          </div>
+
+          <div style="margin: 20px 0;">
+            <div style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">BẰNG CHỨNG PHÁT HIỆN:</div>
+            <div style="background: #f1f5f9; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 13px; color: #334155; white-space: pre-wrap; word-break: break-word;">
+${details}
+            </div>
+          </div>
+
+          <p style="font-size: 13px; color: #64748b; margin-top: 20px;">Vui lòng kiểm tra mã nguồn, lịch sử cập nhật và máy chủ của bạn để ngăn chặn nguy cơ defacement hoặc chèn mã độc/SEO spam cờ bạc.</p>
+          <div style="margin-top: 24px; text-align: center;">
+            <a href="${appUrl}/alerts" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; font-size: 14px;">Mở Trung tâm cảnh báo</a>
+          </div>
+        </div>
+        <div style="background: #f8fafc; padding: 14px 24px; font-size: 12px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9;">
+          Canh Gác Website - Nền tảng Giám sát & An ninh Website 24/7
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  return { subject, html };
+}
+

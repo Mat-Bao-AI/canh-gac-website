@@ -10,11 +10,13 @@ import {
   formatDownAlertTelegram,
   formatRecoveryAlertTelegram,
   formatSSLAlertTelegram,
+  formatAnomalyAlertTelegram,
 } from "../lib/telegram";
 import {
   sendSmtpEmail,
   formatDownAlertEmail,
   formatRecoveryAlertEmail,
+  formatAnomalyAlertEmail,
 } from "../lib/email";
 
 const CONCURRENCY_LIMIT = parseInt(process.env.MONITOR_WORKER_CONCURRENCY || "5", 10);
@@ -564,7 +566,7 @@ async function processWebsiteCheck(websiteId: string) {
       }
     }
 
-    // 4. Save Security Scan if performed
+    // 4. Save Security Scan if performed & Dispatch Anomaly Alert
     if (result.anomalyResult) {
       await prisma.securityScan.create({
         data: {
@@ -581,6 +583,112 @@ async function processWebsiteCheck(websiteId: string) {
           details: result.anomalyResult.details,
         },
       });
+
+      if (result.anomalyResult.hasAnomaly) {
+        // Anti-spam: send anomaly alert at most once per 60 minutes for the same website
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+        const recentAnomalyAlert = await prisma.notificationHistory.findFirst({
+          where: {
+            websiteId: website.id,
+            eventType: "ANOMALY",
+            sentAt: { gte: oneHourAgo },
+          },
+        });
+
+        if (!recentAnomalyAlert) {
+          const timeString = now.toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          });
+
+          // Telegram Alert
+          const botToken = userSettings?.telegramBotToken || process.env.TELEGRAM_BOT_TOKEN;
+          const chatId = userSettings?.telegramChatId || process.env.TELEGRAM_CHAT_ID;
+          const isTelegramEnabled = userSettings ? userSettings.telegramEnabled : true;
+
+          if (botToken && chatId && isTelegramEnabled) {
+            const msg = formatAnomalyAlertTelegram({
+              websiteName: website.name,
+              url: website.url,
+              violatedRules: result.anomalyResult.violatedRules,
+              details: result.anomalyResult.details,
+              timeString,
+              appUrl: APP_URL,
+            });
+
+            const sendRes = await sendTelegramMessage({
+              botToken,
+              chatId,
+              message: msg,
+            });
+
+            await prisma.notificationHistory.create({
+              data: {
+                websiteId: website.id,
+                eventType: "ANOMALY",
+                channel: "TELEGRAM",
+                messageBody: msg,
+                status: sendRes.success ? "SENT" : "FAILED",
+                errorMessage: sendRes.error,
+              },
+            });
+          }
+
+          // Email Alert
+          const smtpHost = userSettings?.smtpHost || process.env.SMTP_HOST || "smtp.gmail.com";
+          const smtpPort = userSettings?.smtpPort || Number(process.env.SMTP_PORT) || 587;
+          const smtpUser = userSettings?.smtpUser || process.env.SMTP_USER;
+          const smtpPass = userSettings?.smtpPass || process.env.SMTP_PASSWORD;
+          const isEmailEnabled = userSettings ? userSettings.emailEnabled !== false : true;
+          const recipientEmail = website.user?.email || userSettings?.fromEmail || process.env.FROM_EMAIL || smtpUser;
+
+          if (isEmailEnabled && smtpHost && smtpUser && smtpPass && recipientEmail) {
+            try {
+              const { subject, html } = formatAnomalyAlertEmail({
+                websiteName: website.name,
+                url: website.url,
+                violatedRules: result.anomalyResult.violatedRules,
+                details: result.anomalyResult.details,
+                timeString,
+                appUrl: APP_URL,
+              });
+
+              const emailRes = await sendSmtpEmail({
+                config: {
+                  host: smtpHost,
+                  port: smtpPort,
+                  user: smtpUser,
+                  pass: smtpPass,
+                  from: userSettings?.fromEmail || process.env.FROM_EMAIL || smtpUser,
+                },
+                to: recipientEmail,
+                subject,
+                html,
+              });
+
+              await prisma.notificationHistory.create({
+                data: {
+                  websiteId: website.id,
+                  eventType: "ANOMALY",
+                  channel: "EMAIL",
+                  messageBody: `[Email: ${subject}]`,
+                  status: emailRes.success ? "SENT" : "FAILED",
+                  errorMessage: emailRes.error,
+                },
+              });
+            } catch (err: unknown) {
+              logger.error("Worker: Failed to dispatch anomaly email alert", {
+                websiteId: website.id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            }
+          }
+        }
+      }
     }
 
     // 5. Update website fields

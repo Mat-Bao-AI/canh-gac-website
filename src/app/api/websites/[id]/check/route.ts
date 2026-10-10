@@ -68,6 +68,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       },
     });
 
+    if (checkResult.anomalyResult) {
+      await prisma.securityScan.create({
+        data: {
+          websiteId: website.id,
+          scannedAt: checkResult.checkedAt,
+          htmlHash: checkResult.anomalyResult.htmlHash,
+          pageTitle: checkResult.anomalyResult.pageTitle,
+          metaDescription: checkResult.anomalyResult.metaDescription,
+          hasAnomaly: checkResult.anomalyResult.hasAnomaly,
+          titleChanged: checkResult.anomalyResult.titleChanged,
+          metaChanged: checkResult.anomalyResult.metaChanged,
+          suspiciousTagsFound: JSON.stringify(checkResult.anomalyResult.suspiciousKeywordsFound),
+          suspiciousLinks: JSON.stringify(checkResult.anomalyResult.externalLinks.slice(0, 20)),
+          details: checkResult.anomalyResult.details,
+        },
+      });
+    }
+
     const nextCheckDate = new Date(checkResult.checkedAt.getTime() + website.checkInterval * 1000);
 
     // Update website fields

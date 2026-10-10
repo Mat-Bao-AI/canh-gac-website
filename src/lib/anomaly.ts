@@ -29,6 +29,7 @@ export interface AnomalyScanResult {
   metaChanged: boolean;
   suspiciousKeywordsFound: string[];
   externalLinks: string[];
+  violatedRules: string[];
   details: string;
 }
 
@@ -100,11 +101,28 @@ export function detectAnomalies(
 
   const hasAnomaly = suspiciousKeywordsFound.length > 0 || titleChanged || metaChanged;
 
+  const violatedRules: string[] = [];
   const reasons: string[] = [];
-  if (titleChanged) reasons.push("Tiêu đề website bị thay đổi so với baseline");
-  if (metaChanged) reasons.push("Thẻ meta description bị thay đổi");
+
   if (suspiciousKeywordsFound.length > 0) {
-    reasons.push(`Phát hiện từ khóa nghi vấn: ${suspiciousKeywordsFound.join(", ")}`);
+    violatedRules.push("Chống can thiệp mã độc & Cá cược (Anti-Defacement / Spam Keywords)");
+    reasons.push(
+      `[Vi phạm Rule Chống Defacement] Phát hiện từ khóa nghi vấn cờ bạc/mã độc: "${suspiciousKeywordsFound.join('", "')}"`
+    );
+  }
+
+  if (titleChanged) {
+    violatedRules.push("Toàn vẹn Tiêu đề trang (Page Title Integrity)");
+    reasons.push(
+      `[Vi phạm Rule Toàn vẹn Tiêu đề] Tiêu đề bị thay đổi (Gốc: "${baseline?.pageTitle || ""}" ➔ Hiện tại: "${pageTitle}")`
+    );
+  }
+
+  if (metaChanged) {
+    violatedRules.push("Toàn vẹn Thẻ mô tả SEO (Meta Description Integrity)");
+    reasons.push(
+      `[Vi phạm Rule Toàn vẹn Thẻ Meta] Thẻ mô tả bị thay đổi (Gốc: "${baseline?.metaDescription || ""}" ➔ Hiện tại: "${metaDescription}")`
+    );
   }
 
   return {
@@ -116,6 +134,7 @@ export function detectAnomalies(
     metaChanged,
     suspiciousKeywordsFound,
     externalLinks,
+    violatedRules,
     details: reasons.length > 0 ? reasons.join("; ") : "Nội dung bình thường, không có dấu hiệu bất thường",
   };
 }

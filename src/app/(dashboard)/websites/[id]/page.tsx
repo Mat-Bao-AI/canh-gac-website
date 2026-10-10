@@ -780,55 +780,131 @@ export default function WebsiteDetailPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {website.securityScans.map((scan) => (
-                <div key={scan.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-900">
-                      Lần quét: {new Date(scan.scannedAt).toLocaleString("vi-VN")}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full font-medium flex items-center gap-1 text-[11px] ${
-                        scan.hasAnomaly ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
-                      }`}
-                    >
-                      {scan.hasAnomaly ? (
-                        <>
-                          <AlertTriangle className="w-3 h-3 text-amber-600" />
-                          <span>Có thay đổi nội dung</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          <span>Bình thường</span>
-                        </>
-                      )}
-                    </span>
+              {website.securityScans.map((scan) => {
+                let suspiciousTags: string[] = [];
+                try {
+                  if (scan.suspiciousTagsFound) {
+                    suspiciousTags = JSON.parse(scan.suspiciousTagsFound);
+                  }
+                } catch {
+                  // Ignored
+                }
+
+                // Extract rule violations
+                const violatedRulesList: { ruleName: string; detail: string; severity: "critical" | "warning" }[] = [];
+                if (suspiciousTags.length > 0) {
+                  violatedRulesList.push({
+                    ruleName: "Rule: Chống can thiệp mã độc & Cá cược (Anti-Defacement / Spam Keywords)",
+                    detail: `Phát hiện ${suspiciousTags.length} từ khóa nghi vấn cờ bạc/mã độc trong mã nguồn HTML: "${suspiciousTags.join('", "')}"`,
+                    severity: "critical",
+                  });
+                }
+                if (scan.titleChanged) {
+                  violatedRulesList.push({
+                    ruleName: "Rule: Toàn vẹn Tiêu đề trang (Page Title Integrity)",
+                    detail: `Thẻ <title> bị thay đổi so với bản gốc baseline ("${scan.pageTitle || "N/A"}")`,
+                    severity: "warning",
+                  });
+                }
+                if (scan.metaChanged) {
+                  violatedRulesList.push({
+                    ruleName: "Rule: Toàn vẹn Thẻ mô tả SEO (Meta Description Integrity)",
+                    detail: `Thẻ <meta name="description"> bị chỉnh sửa so với bản gốc baseline`,
+                    severity: "warning",
+                  });
+                }
+
+                return (
+                  <div
+                    key={scan.id}
+                    className={`p-5 rounded-2xl border text-xs space-y-4 transition ${
+                      scan.hasAnomaly
+                        ? "bg-rose-50/40 border-rose-200"
+                        : "bg-slate-50/70 border-slate-100"
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/60">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 text-sm">
+                          Lần quét: {new Date(scan.scannedAt).toLocaleString("vi-VN")}
+                        </span>
+                      </div>
+                      <span
+                        className={`px-3 py-1 rounded-full font-bold flex items-center gap-1.5 text-xs w-fit ${
+                          scan.hasAnomaly
+                            ? "bg-rose-100 text-rose-800 border border-rose-200"
+                            : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                        }`}
+                      >
+                        {scan.hasAnomaly ? (
+                          <>
+                            <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Phát hiện vi phạm an ninh ({violatedRulesList.length} quy tắc)</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Toàn vẹn an toàn - Đạt chuẩn</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Danh sách vi phạm chi tiết */}
+                    {violatedRulesList.length > 0 && (
+                      <div className="p-3.5 bg-white rounded-xl border border-rose-200/80 shadow-xs space-y-2.5">
+                        <div className="font-bold text-rose-700 flex items-center gap-1.5 uppercase text-[11px] tracking-wide">
+                          <AlertTriangle className="w-4 h-4 text-rose-600" />
+                          <span>Quy tắc an ninh bị vi phạm:</span>
+                        </div>
+                        <div className="space-y-2">
+                          {violatedRulesList.map((item, idx) => (
+                            <div key={idx} className="flex items-start gap-2.5 p-2 bg-rose-50/50 rounded-lg border border-rose-100">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-rose-600 text-white shrink-0 mt-0.5">
+                                Vi phạm
+                              </span>
+                              <div className="flex-1">
+                                <div className="font-bold text-rose-900 text-xs">{item.ruleName}</div>
+                                <div className="text-slate-600 text-[11px] mt-0.5 font-medium">{item.detail}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Metadata Snapshot */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-600 bg-white p-3.5 rounded-xl border border-slate-200/60">
+                      <div>
+                        <span className="font-semibold text-slate-500 block mb-0.5">Tiêu đề trang (Page Title):</span>
+                        <span className="font-medium text-slate-900 break-words">{scan.pageTitle || "(Trống)"}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-500 block mb-0.5">Trạng thái Tiêu đề:</span>
+                        <span className={scan.titleChanged ? "text-amber-600 font-bold" : "text-emerald-600 font-medium"}>
+                          {scan.titleChanged ? "⚠️ Đã bị thay đổi so với bản gốc" : "✓ Trùng khớp bản gốc"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-500 block mb-0.5">Thẻ mô tả (Meta Description):</span>
+                        <span className="font-medium text-slate-900 break-words">{scan.metaDescription || "(Trống)"}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-500 block mb-0.5">Trạng thái Thẻ Meta:</span>
+                        <span className={scan.metaChanged ? "text-amber-600 font-bold" : "text-emerald-600 font-medium"}>
+                          {scan.metaChanged ? "⚠️ Đã bị thay đổi so với bản gốc" : "✓ Trùng khớp bản gốc"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {scan.details && !violatedRulesList.length && (
+                      <div className="p-3 bg-amber-50 rounded-xl text-amber-900 text-xs border border-amber-200">
+                        {scan.details}
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-slate-600">
-                    <div>
-                      <span className="font-medium text-slate-400">Tiêu đề (Title):</span>{" "}
-                      <span className="font-semibold text-slate-800">{scan.pageTitle || "N/A"}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-slate-400">Thay đổi tiêu đề:</span>{" "}
-                      {scan.titleChanged ? "Có" : "Không"}
-                    </div>
-                    <div>
-                      <span className="font-medium text-slate-400">Thẻ Meta:</span>{" "}
-                      <span className="text-slate-800">{scan.metaDescription || "N/A"}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-slate-400">Thay đổi meta:</span>{" "}
-                      {scan.metaChanged ? "Có" : "Không"}
-                    </div>
-                  </div>
-                  {scan.details && (
-                    <div className="p-2.5 bg-amber-50 rounded-lg text-amber-800 text-[11px] border border-amber-200">
-                      {scan.details}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

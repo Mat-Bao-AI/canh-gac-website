@@ -119,3 +119,31 @@ export function formatSSLAlertTelegram(params: {
 
 » Vui lòng gia hạn chứng chỉ SSL sớm để tránh gián đoạn truy cập.`;
 }
+
+export function formatAnomalyAlertTelegram(params: {
+  websiteName: string;
+  url: string;
+  violatedRules: string[];
+  details: string;
+  timeString: string;
+  appUrl: string;
+}): string {
+  const rulesList = params.violatedRules.length > 0
+    ? params.violatedRules.map((r) => `  - <code>${r}</code>`).join("\n")
+    : "  - <code>Quy tắc toàn vẹn nội dung website</code>";
+
+  return `🛡️ <b>[CẢNH BÁO AN NINH: PHÁT HIỆN BẤT THƯỜNG NỘI DUNG]</b>
+
+• <b>Website:</b> ${params.websiteName}
+• <b>URL:</b> ${params.url}
+• <b>Quy tắc vi phạm:</b>
+${rulesList}
+
+• <b>Bằng chứng chi tiết:</b>
+${params.details}
+
+• <b>Thời gian quét:</b> ${params.timeString}
+
+» <a href="${params.appUrl}/alerts">Xem chi tiết trên Trung tâm cảnh báo</a>`;
+}
+

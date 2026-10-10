@@ -132,8 +132,8 @@ export async function executeWebsiteCheck(options: CheckOptions): Promise<CheckW
       if (expectedKeyword && expectedKeyword.trim().length > 0) {
         if (!responseBody.toLowerCase().includes(expectedKeyword.trim().toLowerCase())) {
           calculatedStatus = "DOWN";
-          errorMessage = `Không tìm thấy từ khóa kỳ vọng "${expectedKeyword}"`;
-          statusReason = `Thiếu từ khóa kỳ vọng "${expectedKeyword}"`;
+          errorMessage = `[Vi phạm Rule Từ khóa kỳ vọng] Thiếu từ khóa "${expectedKeyword}"`;
+          statusReason = `[Vi phạm Rule Từ khóa kỳ vọng] Không tìm thấy từ khóa bắt buộc "${expectedKeyword}" trong nội dung`;
           isSuccessful = false;
         }
       }
@@ -219,9 +219,14 @@ export async function executeWebsiteCheck(options: CheckOptions): Promise<CheckW
   if (checkAnomaly && responseBody) {
     try {
       anomalyResult = detectAnomalies(responseBody, baseline);
-      if (anomalyResult.hasAnomaly && calculatedStatus === "UP") {
-        calculatedStatus = "DEGRADED";
-        statusReason = "Phát hiện nội dung trang có dấu hiệu bất thường";
+      if (anomalyResult.hasAnomaly) {
+        if (calculatedStatus === "UP") {
+          calculatedStatus = "DEGRADED";
+        }
+        statusReason = `[Bất thường nội dung] ${anomalyResult.details}`;
+        if (!errorMessage) {
+          errorMessage = `Vi phạm quy tắc an ninh (${anomalyResult.violatedRules.length} quy tắc): ${anomalyResult.violatedRules.join("; ")}`;
+        }
       }
     } catch (e: unknown) {
       logger.error("Anomaly scan error", { url, error: String(e) });

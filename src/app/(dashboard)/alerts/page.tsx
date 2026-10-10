@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Bell, Send, CheckCircle2, AlertTriangle, Shield, Clock, XCircle, Lock, Mail } from "lucide-react";
+import { Bell, Send, CheckCircle2, AlertTriangle, Shield, ShieldAlert, Clock, XCircle, Lock, Mail } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 interface AlertItem {
@@ -108,6 +108,7 @@ export default function AlertsPage() {
               const isDown = alert.eventType === "DOWN";
               const isRecovery = alert.eventType === "RECOVERY";
               const isSSL = alert.eventType === "SSL_WARNING";
+              const isAnomaly = alert.eventType === "ANOMALY";
               const isTest = alert.eventType === "TEST";
 
               return (
@@ -116,6 +117,8 @@ export default function AlertsPage() {
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                       isDown
                         ? "bg-rose-50 text-rose-600 border border-rose-100"
+                        : isAnomaly
+                        ? "bg-rose-50 text-rose-700 border border-rose-200"
                         : isRecovery
                         ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
                         : isSSL
@@ -127,6 +130,8 @@ export default function AlertsPage() {
                   >
                     {isDown ? (
                       <XCircle className="w-5 h-5 text-rose-600" />
+                    ) : isAnomaly ? (
+                      <ShieldAlert className="w-5 h-5 text-rose-600" />
                     ) : isRecovery ? (
                       <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                     ) : isSSL ? (
@@ -156,6 +161,8 @@ export default function AlertsPage() {
                           className={`text-xs font-semibold ${
                             isDown
                               ? "text-rose-600"
+                              : isAnomaly
+                              ? "text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200"
                               : isRecovery
                               ? "text-emerald-600"
                               : isSSL
@@ -167,6 +174,8 @@ export default function AlertsPage() {
                         >
                           {isDown
                             ? "Website gặp lỗi"
+                            : isAnomaly
+                            ? "🛡️ Cảnh báo bất thường & Vi phạm an ninh"
                             : isRecovery
                             ? "Đã phục hồi hoạt động"
                             : isSSL
