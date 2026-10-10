@@ -16,9 +16,46 @@ const DEFAULT_SUSPICIOUS_KEYWORDS = [
   "đá gà",
   "lô đề",
   "slot game",
-  "hack",
-  "phishing",
+  "hacked by",
+  "defaced by",
 ];
+
+// Ngữ cảnh chính sách/pháp lý an toàn (loại trừ false-positive trên các website có điều khoản dịch vụ/chống tấn công)
+const SAFE_POLICY_MARKERS = [
+  "nghiêm cấm",
+  "cấm sử dụng",
+  "cấm các dịch vụ",
+  "hành vi cấm",
+  "không được phép",
+  "ngăn chặn",
+  "phòng chống",
+  "phòng ngừa",
+  "chính sách",
+  "điều khoản",
+  "quy định",
+  "nghị định",
+  "trái phép",
+  "vi phạm pháp luật",
+  "bị cấm",
+  "bảo vệ tên miền",
+  "an toàn thông tin",
+  "cảnh báo lừa đảo",
+  "xử lý vi phạm",
+  "lỗ hổng bảo mật",
+  "tấn công mạng",
+  "bị hack",
+  "rò rỉ thông tin",
+  "thỏa thuận",
+];
+
+function isSafePolicyContext(html: string, matchIndex: number): boolean {
+  // Kiểm tra cửa sổ 250 ký tự phía trước và 150 ký tự phía sau
+  const start = Math.max(0, matchIndex - 250);
+  const end = Math.min(html.length, matchIndex + 150);
+  const surroundingText = html.substring(start, end).toLowerCase();
+
+  return SAFE_POLICY_MARKERS.some((marker) => surroundingText.includes(marker));
+}
 
 export interface AnomalyScanResult {
   htmlHash: string;
@@ -82,8 +119,16 @@ export function detectAnomalies(
   const suspiciousKeywordsFound: string[] = [];
 
   for (const kw of DEFAULT_SUSPICIOUS_KEYWORDS) {
-    if (lowerHtml.includes(kw.toLowerCase())) {
-      suspiciousKeywordsFound.push(kw);
+    const kwLower = kw.toLowerCase();
+    let idx = 0;
+    while ((idx = lowerHtml.indexOf(kwLower, idx)) !== -1) {
+      if (!isSafePolicyContext(lowerHtml, idx)) {
+        if (!suspiciousKeywordsFound.includes(kw)) {
+          suspiciousKeywordsFound.push(kw);
+        }
+        break;
+      }
+      idx += kwLower.length;
     }
   }
 
