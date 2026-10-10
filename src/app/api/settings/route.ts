@@ -10,7 +10,7 @@ const updateSettingsSchema = z.object({
   
   // Password change
   currentPassword: z.string().optional(),
-  newPassword: z.string().min(6).optional(),
+  newPassword: z.string().min(8, "Mật khẩu mới tối thiểu 8 ký tự").optional(),
 
   // Notifications
   telegramBotToken: z.string().optional().nullable(),
@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
           name: user.name,
           email: user.email,
           avatar: user.avatar,
+          twoFactorEnabled: user.twoFactorEnabled,
         },
         settings: settings || {
           telegramEnabled: true,

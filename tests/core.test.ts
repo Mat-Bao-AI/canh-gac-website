@@ -3,6 +3,7 @@ import assert from "node:assert";
 import { isIpPrivateOrReserved, validateUrlAgainstSSRF } from "../src/lib/ssrf";
 import { detectAnomalies, extractHtmlMetadata } from "../src/lib/anomaly";
 import { evaluateWebsiteState } from "../src/lib/staleness";
+import { generateSecret, generateTOTP, verifyTOTP, generateRecoveryCodes, verifyAndConsumeRecoveryCode } from "../src/lib/totp";
 
 describe("Core Monitoring Logic & Security Tests", () => {
   describe("1. SSRF URL Validation & Private IP Filtering", () => {
@@ -212,6 +213,45 @@ describe("Core Monitoring Logic & Security Tests", () => {
       const result = evaluateWebsiteState(site);
       assert.strictEqual(result.displayStatus, "PAUSED");
       assert.strictEqual(result.label, "Tạm dừng");
+    });
+  });
+
+  describe("5. Two-Factor Authentication (RFC 6238 TOTP & Recovery Codes)", () => {
+    it("should generate a valid Base32 secret key", () => {
+      const secret = generateSecret();
+      assert.ok(secret.length >= 26, "Secret must be at least 26 base32 characters");
+      assert.ok(/^[A-Z2-7]+$/.test(secret), "Secret must strictly use RFC 4648 Base32 alphabet");
+    });
+
+    it("should generate and verify 6-digit TOTP token accurately", () => {
+      const secret = generateSecret();
+      const code = generateTOTP(secret);
+      assert.strictEqual(code.length, 6, "TOTP code must be 6 digits");
+      assert.ok(/^\d{6}$/.test(code), "TOTP code must be numeric");
+
+      const isValid = verifyTOTP(code, secret);
+      assert.strictEqual(isValid, true, "Generated TOTP must verify successfully");
+
+      const isInvalid = verifyTOTP("000000", secret);
+      // In extremely rare chance code is 000000
+      if (code !== "000000") {
+        assert.strictEqual(isInvalid, false, "Arbitrary invalid code must fail");
+      }
+    });
+
+    it("should generate 8 formatted backup recovery codes and allow one-time consumption", () => {
+      const codes = generateRecoveryCodes(8);
+      assert.strictEqual(codes.length, 8, "Must generate exactly 8 recovery codes");
+      assert.ok(codes.every((c) => /^[A-F0-9]{4}-[A-F0-9]{4}$/.test(c)), "Recovery code format must be XXXX-XXXX");
+
+      const codeToUse = codes[2];
+      const result = verifyAndConsumeRecoveryCode(codeToUse, codes);
+      assert.strictEqual(result.valid, true, "Valid recovery code must pass verification");
+      assert.strictEqual(result.remainingCodes.length, 7, "Used code must be consumed and removed");
+      assert.strictEqual(result.remainingCodes.includes(codeToUse), false, "Remaining codes must not include used code");
+
+      const reuseResult = verifyAndConsumeRecoveryCode(codeToUse, result.remainingCodes);
+      assert.strictEqual(reuseResult.valid, false, "Reused recovery code must fail");
     });
   });
 });

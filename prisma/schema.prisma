@@ -9,13 +9,16 @@ generator client {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  passwordHash  String    @map("password_hash")
-  avatar        String?
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id                     String    @id @default(cuid())
+  name                   String
+  email                  String    @unique
+  passwordHash           String    @map("password_hash")
+  avatar                 String?
+  twoFactorEnabled       Boolean   @default(false) @map("two_factor_enabled")
+  twoFactorSecret        String?   @map("two_factor_secret")
+  twoFactorRecoveryCodes String?   @map("two_factor_recovery_codes")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   websites      Website[]
   settings      UserSettings?

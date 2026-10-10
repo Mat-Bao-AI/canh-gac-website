@@ -1,7 +1,28 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Send, CheckCircle2, AlertCircle, Loader2, Key, Mail, Bell, Shield, User } from "lucide-react";
+import {
+  Send,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Key,
+  Mail,
+  Bell,
+  Shield,
+  User,
+  ShieldCheck,
+  QrCode,
+  KeyRound,
+  Copy,
+  Check,
+  Lock,
+  Smartphone,
+  RefreshCw,
+  X,
+  Sparkles,
+} from "lucide-react";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("telegram");
@@ -9,6 +30,18 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [testingTelegram, setTestingTelegram] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // 2FA state
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [showSetup2FAModal, setShowSetup2FAModal] = useState(false);
+  const [setup2FAData, setSetup2FAData] = useState<{ secret: string; otpAuthUrl: string; recoveryCodes: string[] } | null>(null);
+  const [setup2FACode, setSetup2FACode] = useState("");
+  const [activating2FA, setActivating2FA] = useState(false);
+  const [showDisable2FAModal, setShowDisable2FAModal] = useState(false);
+  const [disable2FACode, setDisable2FACode] = useState("");
+  const [disabling2FA, setDisabling2FA] = useState(false);
+  const [copiedSecret, setCopiedSecret] = useState(false);
+  const [copiedCodes, setCopiedCodes] = useState(false);
 
   // Form states
   const [name, setName] = useState("");
@@ -50,6 +83,7 @@ export default function SettingsPage() {
           const s = json.data.settings;
           setName(u.name || "");
           setEmail(u.email || "");
+          setTwoFactorEnabled(Boolean(u.twoFactorEnabled));
 
           if (s) {
             setBotToken(s.telegramBotToken || "");
@@ -192,6 +226,88 @@ export default function SettingsPage() {
       showMsg("error", err instanceof Error ? err.message : "Lỗi mạng");
     } finally {
       setTestingEmail(false);
+    }
+  };
+
+  const handleStartSetup2FA = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/auth/2fa/setup", { method: "POST" });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setSetup2FAData(json.data);
+        setSetup2FACode("");
+        setCopiedSecret(false);
+        setCopiedCodes(false);
+        setShowSetup2FAModal(true);
+      } else {
+        showMsg("error", json.message || "Không thể khởi tạo mã xác thực 2 bước");
+      }
+    } catch {
+      showMsg("error", "Lỗi mạng khi khởi tạo 2FA");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmEnable2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!setup2FAData || !setup2FACode.trim()) return;
+
+    setActivating2FA(true);
+    try {
+      const res = await fetch("/api/auth/2fa/enable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          secret: setup2FAData.secret,
+          code: setup2FACode.trim(),
+          recoveryCodes: setup2FAData.recoveryCodes,
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setTwoFactorEnabled(true);
+        setShowSetup2FAModal(false);
+        setSetup2FAData(null);
+        setSetup2FACode("");
+        showMsg("success", "Đã kích hoạt xác thực 2 bước (2FA) thành công!");
+      } else {
+        showMsg("error", json.message || "Mã xác thực không chính xác");
+      }
+    } catch {
+      showMsg("error", "Lỗi kết nối máy chủ");
+    } finally {
+      setActivating2FA(false);
+    }
+  };
+
+  const handleConfirmDisable2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!disable2FACode.trim()) return;
+
+    setDisabling2FA(true);
+    try {
+      const res = await fetch("/api/auth/2fa/disable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: disable2FACode.trim() }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setTwoFactorEnabled(false);
+        setShowDisable2FAModal(false);
+        setDisable2FACode("");
+        showMsg("success", "Đã hủy kích hoạt xác thực 2 bước thành công");
+      } else {
+        showMsg("error", json.message || "Mã OTP hoặc mật khẩu không đúng");
+      }
+    } catch {
+      showMsg("error", "Lỗi kết nối máy chủ");
+    } finally {
+      setDisabling2FA(false);
     }
   };
 
@@ -645,43 +761,312 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100">
-            <h4 className="text-xs font-bold text-slate-900 mb-3 flex items-center gap-1.5">
+          <div className="pt-4 border-t border-slate-100 space-y-4">
+            <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
               <Key className="w-3.5 h-3.5 text-blue-600" />
-              <span>Đổi mật khẩu</span>
+              <span>Đổi mật khẩu tài khoản</span>
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-slate-600 mb-1">Mật khẩu hiện tại</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Mật khẩu hiện tại
+                </label>
                 <input
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 transition"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-600 mb-1">Mật khẩu mới</label>
-                <input
-                  type="password"
+                <PasswordInput
+                  label="Mật khẩu mới"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
+                  onChange={setNewPassword}
+                  placeholder="Nhập mật khẩu mới an toàn"
+                  required={false}
+                  showStrengthMeter={true}
                 />
               </div>
             </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={handleSaveSettings}
+                disabled={saving}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>{saving ? "Đang lưu..." : "Lưu thay đổi mật khẩu"}</span>
+              </button>
+            </div>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-slate-100">
-            <button
-              onClick={handleSaveSettings}
-              disabled={saving}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition"
-            >
-              {saving ? "Đang lưu..." : "Cập nhật hồ sơ"}
-            </button>
+          {/* Section: Xác thực 2 bước (2FA) */}
+          <div className="pt-6 border-t border-slate-100 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                  <span>Xác thực 2 bước (Two-Factor Authentication - 2FA)</span>
+                </h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  Bảo vệ tài khoản tối đa bằng ứng dụng xác thực Google Authenticator hoặc Microsoft Authenticator
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+                    twoFactorEnabled
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : "bg-slate-100 text-slate-600 border border-slate-200"
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${twoFactorEnabled ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                  <span>{twoFactorEnabled ? "Đang bảo vệ (Đã bật)" : "Chưa kích hoạt"}</span>
+                </span>
+
+                {twoFactorEnabled ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDisable2FAModal(true)}
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition"
+                  >
+                    Tắt 2FA
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleStartSetup2FA}
+                    disabled={loading}
+                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-xs flex items-center gap-1.5"
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    <span>Bật 2FA ngay</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {twoFactorEnabled ? (
+              <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 text-xs text-emerald-900 flex items-start gap-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold">Tài khoản của bạn đang được bảo vệ an toàn</p>
+                  <p className="text-emerald-700">
+                    Mỗi khi đăng nhập trên thiết bị mới, hệ thống sẽ yêu cầu mã xác thực 6 chữ số sinh ra từ ứng dụng Authenticator của bạn.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 text-xs text-slate-600 flex items-start gap-3">
+                <Shield className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-slate-800">Khuyên dùng cho tài khoản quản trị</p>
+                  <p className="text-slate-500 mt-0.5">
+                    Ngăn chặn 99.9% rủi ro bị lộ mật khẩu bằng cách yêu cầu mã xác thực động TOTP 30 giây một lần.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CÀI ĐẶT 2FA */}
+      {showSetup2FAModal && setup2FAData && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 my-8 animate-fadeIn">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Cài đặt xác thực 2 bước (2FA)</h3>
+                  <p className="text-xs text-slate-500">Chuẩn bảo mật quốc tế RFC 6238</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSetup2FAModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Bước 1: Quét mã QR */}
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                Bước 1: Quét mã QR trong ứng dụng Authenticator
+              </span>
+              <p className="text-xs text-slate-500">
+                Mở <b>Google Authenticator</b>, <b>Microsoft Authenticator</b> hoặc ứng dụng TOTP bất kỳ và quét mã dưới đây:
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="bg-white p-2 rounded-xl shadow-xs border border-slate-200 shrink-0">
+                  {/* QR Code trực tiếp */}
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                      setup2FAData.otpAuthUrl
+                    )}`}
+                    alt="2FA QR Code"
+                    className="w-32 h-32"
+                  />
+                </div>
+                <div className="text-xs space-y-2 min-w-0 flex-1">
+                  <span className="text-slate-500 block">Hoặc nhập khóa bí mật thủ công:</span>
+                  <div className="font-mono bg-white p-2 rounded-lg border border-slate-200 text-slate-800 text-[11px] break-all select-all font-bold">
+                    {setup2FAData.secret}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(setup2FAData.secret);
+                      setCopiedSecret(true);
+                      setTimeout(() => setCopiedSecret(false), 2000);
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:underline"
+                  >
+                    {copiedSecret ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedSecret ? "Đã sao chép khóa!" : "Sao chép khóa"}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Bước 2: Lưu mã khôi phục */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Bước 2: Lưu mã khôi phục dự phòng (Recovery Codes)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(setup2FAData.recoveryCodes.join("\n"));
+                    setCopiedCodes(true);
+                    setTimeout(() => setCopiedCodes(false), 2000);
+                  }}
+                  className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1"
+                >
+                  {copiedCodes ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedCodes ? "Đã sao chép 8 mã" : "Sao chép tất cả"}</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Nếu mất điện thoại, bạn có thể dùng một trong các mã này để đăng nhập lại:
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 font-mono text-[11px] text-center text-slate-800 font-bold">
+                {setup2FAData.recoveryCodes.map((c, i) => (
+                  <div key={i} className="bg-white py-1 px-1.5 rounded border border-slate-100">
+                    {c}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bước 3: Xác thực mã 6 số */}
+            <form onSubmit={handleConfirmEnable2FA} className="space-y-4 pt-2 border-t border-slate-100">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+                  Bước 3: Nhập mã 6 chữ số từ ứng dụng để hoàn tất
+                </label>
+                <input
+                  type="text"
+                  value={setup2FACode}
+                  onChange={(e) => setSetup2FACode(e.target.value)}
+                  placeholder="123456"
+                  maxLength={6}
+                  required
+                  autoFocus
+                  className="w-full text-center tracking-widest text-lg font-mono py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSetup2FAModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={activating2FA || setup2FACode.length < 6}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {activating2FA && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{activating2FA ? "Đang xác thực..." : "Kích hoạt bảo vệ 2FA"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL TẮT 2FA */}
+      {showDisable2FAModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5 animate-fadeIn">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-600" />
+                <h3 className="font-bold text-slate-900 text-base">Hủy kích hoạt 2FA</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDisable2FAModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Bạn có chắc chắn muốn tắt xác thực 2 bước? Tài khoản của bạn sẽ chỉ được bảo vệ bởi mật khẩu đơn lẻ.
+            </p>
+
+            <form onSubmit={handleConfirmDisable2FA} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Nhập mã Authenticator 6 số hoặc mật khẩu để xác nhận
+                </label>
+                <input
+                  type="password"
+                  value={disable2FACode}
+                  onChange={(e) => setDisable2FACode(e.target.value)}
+                  placeholder="Mã 6 số hoặc mật khẩu"
+                  required
+                  autoFocus
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 transition"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDisable2FAModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+                >
+                  Giữ nguyên
+                </button>
+                <button
+                  type="submit"
+                  disabled={disabling2FA || !disable2FACode.trim()}
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {disabling2FA && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{disabling2FA ? "Đang tắt..." : "Xác nhận tắt 2FA"}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

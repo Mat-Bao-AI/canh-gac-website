@@ -199,7 +199,7 @@ Tất cả 15 bài kiểm thử cốt lõi về SSRF filtering, anomaly keyword 
 
 ## 8. 🚀 Hướng Dẫn Deploy (Chuẩn Danh Mục Mẫu Vibe Host)
 
-> *Mục này đáp ứng đầy đủ 6 yêu cầu bắt buộc khi nộp mẫu deploy lên Vibe Host (Mắt Bão).*
+> *Mục này đáp ứng đầy đủ 6 yêu cầu bắt buộc khi nộp mẫu deploy lên Vibe Host.*
 
 ### 8.1. Yêu cầu trước
 - **Runtime:** Node.js 20.x LTS hoặc môi trường Docker 24+.

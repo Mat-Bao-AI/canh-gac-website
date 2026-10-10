@@ -50,6 +50,7 @@ export async function getSessionUser() {
         name: true,
         email: true,
         avatar: true,
+        twoFactorEnabled: true,
         createdAt: true,
       },
     });
@@ -84,11 +85,28 @@ export async function getApiUser(req: NextRequest) {
       name: true,
       email: true,
       avatar: true,
+      twoFactorEnabled: true,
       createdAt: true,
     },
   });
 
   return user;
+}
+
+export function sign2FATempToken(userId: string): string {
+  return jwt.sign({ userId, purpose: "2fa_pending" }, JWT_SECRET, { expiresIn: "5m" });
+}
+
+export function verify2FATempToken(token: string): { userId: string } | null {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; purpose?: string };
+    if (decoded && decoded.purpose === "2fa_pending" && decoded.userId) {
+      return { userId: decoded.userId };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export { COOKIE_NAME };

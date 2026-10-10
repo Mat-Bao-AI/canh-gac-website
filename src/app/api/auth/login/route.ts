@@ -53,6 +53,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Nếu tài khoản đã bật 2FA, yêu cầu bước nhập mã Authenticator
+    if (user.twoFactorEnabled) {
+      const { sign2FATempToken } = await import("@/lib/auth");
+      const tempToken = sign2FATempToken(user.id);
+      return NextResponse.json({
+        success: true,
+        requires2FA: true,
+        tempToken,
+        message: "Vui lòng nhập mã xác thực 2 bước (2FA / Authenticator)",
+      });
+    }
+
     const token = signToken({
       userId: user.id,
       email: user.email,

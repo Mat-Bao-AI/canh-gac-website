@@ -1,4 +1,4 @@
-# 📋 BẢNG THÔNG TIN NỘP MẪU DEPLOY VIBE HOST (MẮT BÃO)
+# 📋 BẢNG THÔNG TIN NỘP MẪU DEPLOY VIBE HOST
 > **Tài liệu nộp mẫu chuẩn hoá theo đúng yêu cầu từ trang: `vibehost-template.n1.tinhgon.xyz`**  
 > *Điền đầy đủ các mục dưới đây để Admin Vibe Host duyệt và kích hoạt mẫu tự động.*
 
@@ -9,7 +9,7 @@
 - **Mã nguồn Git:** `https://github.com/Mat-Bao-AI/canh-gac-website` *(Công khai - Public)*
 - **Nhánh mặc định (gitRef):** `main`
 - **Thư mục con (subdir):** *(Để trống - root directory)*
-- **Ảnh Docker (nếu dùng registry):** `matbaogit/canh-gac-website:latest`
+- **Ảnh Docker (nếu dùng registry):** `canhgac/canh-gac-website:latest`
 
 ---
 
@@ -28,7 +28,7 @@
 | **`name`** *(bắt buộc)* | **Canh Gác Website** | Không trùng mẫu có sẵn |
 | **`category`** *(bắt buộc)* | **Giám sát & An ninh mạng** | Nhóm danh mục tìm kiếm |
 | **`description`** | Nền tảng giám sát Uptime 24/7, phát hiện downtime sau 2 lần kiểm tra liên tiếp, cảnh báo hết hạn SSL trước 30/15/7/1 ngày, quét an ninh và cảnh báo đa kênh Telegram & Email. | Dưới 500 ký tự |
-| **`iconUrl`** | `https://raw.githubusercontent.com/matbaogit/canh-gac-website/main/public/icon.png` | Icon logo trực quan |
+| **`iconUrl`** | `https://raw.githubusercontent.com/Mat-Bao-AI/canh-gac-website/main/public/icon.png` | Icon logo trực quan |
 
 ---
 

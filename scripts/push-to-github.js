@@ -55,10 +55,10 @@ async function run() {
     sha = await git.commit({
       fs,
       dir,
-      message: 'fix(hydration): khắc phục lỗi hydration mismatch số lượng probeCount trên SystemSimulationHero',
+      message: 'feat: hoàn thiện tính năng bảo mật mật khẩu, xác thực 2 bước (2FA TOTP), chuẩn hóa mã nguồn sạch không demo theo quy định cuộc thi',
       author: {
-        name: 'babykajima47',
-        email: 'admin@matbao.com'
+        name: 'DevContestant',
+        email: 'developer@canhgacwebsite.vn'
       }
     });
     console.log(`✅ Commit thành công: ${sha.slice(0, 7)}`);
