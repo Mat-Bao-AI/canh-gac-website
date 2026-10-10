@@ -6,7 +6,7 @@
 
 ## 0. Phương Thức Triển Khai (Deployment Route)
 - **Hình thức:** **Mã nguồn Git** (hoặc **Ảnh Docker có sẵn**)
-- **Mã nguồn Git:** `https://github.com/matbaogit/canh-gac-website` *(Công khai - Public)*
+- **Mã nguồn Git:** `https://github.com/Mat-Bao-AI/canh-gac-website` *(Công khai - Public)*
 - **Nhánh mặc định (gitRef):** `main`
 - **Thư mục con (subdir):** *(Để trống - root directory)*
 - **Ảnh Docker (nếu dùng registry):** `matbaogit/canh-gac-website:latest`

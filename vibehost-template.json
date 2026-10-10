@@ -5,7 +5,7 @@
   "iconUrl": "https://raw.githubusercontent.com/matbaogit/canh-gac-website/main/public/icon.png",
   "source": {
     "type": "git",
-    "repoUrl": "https://github.com/matbaogit/canh-gac-website",
+    "repoUrl": "https://github.com/Mat-Bao-AI/canh-gac-website",
     "gitRef": "main",
     "subdir": ""
   },
