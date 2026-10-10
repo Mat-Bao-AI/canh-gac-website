@@ -15,7 +15,7 @@
     "db:generate": "prisma generate",
     "db:clear": "tsx scripts/clear-db.ts",
     "seed": "tsx prisma/seed.ts",
-    "test": "tsx --test tests/core.test.ts",
+    "test": "tsx --test tests/core.test.ts tests/rules.test.ts",
     "lint": "next lint"
   },
   "dependencies": {
