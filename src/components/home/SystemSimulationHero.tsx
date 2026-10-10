@@ -313,7 +313,7 @@ export function SystemSimulationHero() {
       <div className="mt-3 p-3 bg-black/70 rounded-xl border border-slate-900 text-[10px] font-mono text-slate-400 space-y-1">
         <div className="flex items-center justify-between text-slate-500 pb-1.5 border-b border-slate-800/80">
           <span className="text-[9px] tracking-wider uppercase text-slate-400">TELEMETRY STREAM LOG</span>
-          <span className="text-slate-400">TỔNG LƯỢT PROBE: <strong>{probeCount.toLocaleString()}</strong></span>
+          <span className="text-slate-400">TỔNG LƯỢT PROBE: <strong suppressHydrationWarning>{new Intl.NumberFormat("en-US").format(probeCount)}</strong></span>
         </div>
         {logHistory.map((line, i) => (
           <p key={i} className={`truncate ${i === 0 ? "text-emerald-400 font-medium" : "text-slate-500"}`}>

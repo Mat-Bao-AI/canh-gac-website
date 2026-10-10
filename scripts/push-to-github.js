@@ -55,7 +55,7 @@ async function run() {
     sha = await git.commit({
       fs,
       dir,
-      message: 'feat(rules): nghiêm ngặt hóa quy tắc HTTP 200 và tính năng lặp lại cảnh báo định kỳ khi sập',
+      message: 'fix(hydration): khắc phục lỗi hydration mismatch số lượng probeCount trên SystemSimulationHero',
       author: {
         name: 'babykajima47',
         email: 'admin@matbao.com'

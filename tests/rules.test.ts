@@ -6,8 +6,8 @@ import { formatDownAlertEmail, formatRecoveryAlertEmail } from "../src/lib/email
 describe("Strict HTTP 200 & Repeat Alert Rule Tests", () => {
   describe("1. Strict HTTP Status Rule Evaluation", () => {
     it("should classify HTTP 200 as UP when expected status is 200", () => {
-      const httpStatus = 200;
-      const expectedStatusCode = 200;
+      const httpStatus: number = 200;
+      const expectedStatusCode: number = 200;
       const isTargetStatus = expectedStatusCode ? httpStatus === expectedStatusCode : httpStatus === 200;
       const isSuccessful = isTargetStatus;
       const status = isTargetStatus ? "UP" : "DOWN";
@@ -17,8 +17,8 @@ describe("Strict HTTP 200 & Repeat Alert Rule Tests", () => {
     });
 
     it("should classify HTTP 403 Forbidden strictly as DOWN", () => {
-      const httpStatus = 403;
-      const expectedStatusCode = 200;
+      const httpStatus: number = 403;
+      const expectedStatusCode: number = 200;
       const isTargetStatus = expectedStatusCode ? httpStatus === expectedStatusCode : httpStatus === 200;
       const isSuccessful = isTargetStatus;
       const status = isTargetStatus ? "UP" : "DOWN";
@@ -28,8 +28,8 @@ describe("Strict HTTP 200 & Repeat Alert Rule Tests", () => {
     });
 
     it("should classify HTTP 404 Not Found strictly as DOWN", () => {
-      const httpStatus = 404;
-      const expectedStatusCode = 200;
+      const httpStatus: number = 404;
+      const expectedStatusCode: number = 200;
       const isTargetStatus = expectedStatusCode ? httpStatus === expectedStatusCode : httpStatus === 200;
       const isSuccessful = isTargetStatus;
       const status = isTargetStatus ? "UP" : "DOWN";
@@ -39,23 +39,23 @@ describe("Strict HTTP 200 & Repeat Alert Rule Tests", () => {
     });
 
     it("should classify HTTP 500, 502, 503, 504 server errors strictly as DOWN", () => {
-      const errorCodes = [500, 502, 503, 504];
+      const errorCodes: number[] = [500, 502, 503, 504];
       for (const code of errorCodes) {
-        const isTargetStatus = 200 ? code === 200 : false;
+        const isTargetStatus = code === 200;
         const status = isTargetStatus ? "UP" : "DOWN";
         assert.strictEqual(status, "DOWN", `Code ${code} must be DOWN`);
       }
     });
 
     it("should classify HTTP 429 Too Many Requests as DOWN", () => {
-      const httpStatus = 429;
+      const httpStatus: number = 429;
       const isTargetStatus = httpStatus === 200;
       assert.strictEqual(isTargetStatus, false);
     });
 
     it("should allow custom expected status code if explicitly configured (e.g. 301)", () => {
-      const httpStatus = 301;
-      const expectedStatusCode = 301;
+      const httpStatus: number = 301;
+      const expectedStatusCode: number = 301;
       const isTargetStatus = expectedStatusCode ? httpStatus === expectedStatusCode : httpStatus === 200;
       assert.strictEqual(isTargetStatus, true);
     });
