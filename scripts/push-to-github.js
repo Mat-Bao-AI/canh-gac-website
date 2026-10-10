@@ -5,10 +5,15 @@ const git = require('isomorphic-git');
 const http = require('isomorphic-git/http/node');
 
 const dir = path.resolve(__dirname, '..');
-const token = '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';
+const token = process.env.GITHUB_TOKEN || '';
 const repoUrl = 'https://github.com/Mat-Bao-AI/canh-gac-website.git';
 
 async function run() {
+  if (!token) {
+    console.error('❌ Lỗi: Vui lòng cung cấp GITHUB_TOKEN qua biến môi trường!');
+    process.exit(1);
+  }
+
   console.log('====================================================');
   console.log(`🚀 BẮT ĐẦU ĐẨY TOÀN BỘ MÃ NGUỒN LÊN: ${repoUrl}`);
   console.log('====================================================');
@@ -50,7 +55,7 @@ async function run() {
     sha = await git.commit({
       fs,
       dir,
-      message: 'feat: hoàn thiện nền tảng Canh Gác Website chuẩn mẫu Vibe Host Mắt Bão',
+      message: 'fix(docker): cài đặt openssl và libc6-compat khắc phục lỗi crash_loop Prisma trên Alpine',
       author: {
         name: 'babykajima47',
         email: 'admin@matbao.com'
