@@ -1,9 +1,9 @@
 # Multi-stage Dockerfile for Canh Gac Website (Production)
 FROM node:20-alpine AS base
+RUN apk add --no-cache libc6-compat openssl
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -23,7 +23,8 @@ RUN npx prisma generate
 RUN npm run build
 
 # Production runner image
-FROM base AS runner
+FROM node:20-alpine AS runner
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -44,6 +45,7 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/src ./src
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
+COPY server.js ./server.js
 
 RUN chmod +x ./docker-entrypoint.sh
 
