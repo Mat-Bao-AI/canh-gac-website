@@ -132,11 +132,6 @@ export default function SettingsPage() {
   };
 
   const handleTestTelegram = async () => {
-    if (!botToken || !chatId) {
-      showMsg("error", "Vui lòng nhập Bot Token và Chat ID trước khi kiểm tra");
-      return;
-    }
-
     setTestingTelegram(true);
     setStatusMessage(null);
 
@@ -144,19 +139,56 @@ export default function SettingsPage() {
       const res = await fetch("/api/integrations/telegram/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ botToken, chatId }),
+        body: JSON.stringify({
+          botToken: botToken || undefined,
+          chatId: chatId || undefined,
+        }),
       });
 
       const json = await res.json();
       if (!res.ok || !json.success) {
         showMsg("error", json.message || "Gửi tin nhắn Telegram thất bại");
       } else {
-        showMsg("success", "Telegram đã kết nối và gửi tin nhắn kiểm tra thành công!");
+        setTelegramEnabled(true);
+        showMsg("success", json.message || "Telegram đã kết nối và gửi tin nhắn kiểm tra thành công!");
       }
     } catch (err: unknown) {
       showMsg("error", err instanceof Error ? err.message : "Lỗi mạng");
     } finally {
       setTestingTelegram(false);
+    }
+  };
+
+  const [testingEmail, setTestingEmail] = useState(false);
+
+  const handleTestEmail = async () => {
+    setTestingEmail(true);
+    setStatusMessage(null);
+
+    try {
+      const res = await fetch("/api/integrations/email/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          smtpHost: smtpHost || undefined,
+          smtpPort: Number(smtpPort) || 587,
+          smtpUser: smtpUser || undefined,
+          smtpPass: smtpPass || undefined,
+          toEmail: email || smtpUser || undefined,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        showMsg("error", json.message || "Gửi email kiểm tra thất bại");
+      } else {
+        setEmailEnabled(true);
+        showMsg("success", json.message || "Email kiểm tra đã được gửi thành công!");
+      }
+    } catch (err: unknown) {
+      showMsg("error", err instanceof Error ? err.message : "Lỗi mạng");
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -421,15 +453,46 @@ export default function SettingsPage() {
               className="rounded text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="enableEmail" className="text-xs font-semibold text-slate-700">
-              Kích hoạt cảnh báo qua Email
+              Kích hoạt cảnh báo sự cố qua Email
             </label>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-slate-100">
+          {/* Hướng dẫn cấu hình SMTP */}
+          <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs text-slate-600 leading-relaxed space-y-1">
+            <p className="font-semibold text-blue-900 flex items-center gap-1.5">
+              <span>💡</span> Hướng dẫn cấu hình gửi mail SMTP nhanh:
+            </p>
+            <p>
+              • <b>Gmail / Google Workspace:</b> Host là <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 text-blue-700 font-mono">smtp.gmail.com</code>, Port <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 text-blue-700 font-mono">587</code>. Bạn cần bật <i>Xác minh 2 bước</i> trong tài khoản Google và tạo <b>Mật khẩu ứng dụng (App Password)</b> 16 ký tự để dán vào ô SMTP Password.
+            </p>
+            <p>
+              • Email kiểm tra sẽ được gửi trực tiếp đến hộp thư tài khoản của bạn: <b>{email || "email của bạn"}</b>.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100">
+            <button
+              onClick={handleTestEmail}
+              disabled={testingEmail || saving}
+              className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {testingEmail ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  <span>Đang kết nối SMTP & gửi thử...</span>
+                </>
+              ) : (
+                <>
+                  <Mail className="w-4 h-4 text-blue-600" />
+                  <span>Kiểm tra kết nối Email (Gửi thử)</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={handleSaveSettings}
-              disabled={saving}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition"
+              disabled={saving || testingEmail}
+              className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition shadow-xs cursor-pointer disabled:opacity-50"
             >
               {saving ? "Đang lưu..." : "Lưu cấu hình Email"}
             </button>

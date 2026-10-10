@@ -55,7 +55,7 @@ async function run() {
     sha = await git.commit({
       fs,
       dir,
-      message: 'fix(docker): cài đặt openssl và libc6-compat khắc phục lỗi crash_loop Prisma trên Alpine',
+      message: 'feat(notifications): hoàn thiện gửi email SMTP cảnh báo sự cố tự động và trung tâm thông báo Header',
       author: {
         name: 'babykajima47',
         email: 'admin@matbao.com'

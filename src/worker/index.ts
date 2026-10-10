@@ -11,6 +11,11 @@ import {
   formatRecoveryAlertTelegram,
   formatSSLAlertTelegram,
 } from "../lib/telegram";
+import {
+  sendSmtpEmail,
+  formatDownAlertEmail,
+  formatRecoveryAlertEmail,
+} from "../lib/email";
 
 const CONCURRENCY_LIMIT = parseInt(process.env.MONITOR_WORKER_CONCURRENCY || "5", 10);
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -166,20 +171,21 @@ async function processWebsiteCheck(websiteId: string) {
             startedAt: newIncident.startedAt.toISOString(),
           });
 
+          const timeString = now.toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          });
+
           // Send Telegram Alert if configured
           const botToken = userSettings?.telegramBotToken || process.env.TELEGRAM_BOT_TOKEN;
           const chatId = userSettings?.telegramChatId || process.env.TELEGRAM_CHAT_ID;
           const isTelegramEnabled = userSettings ? userSettings.telegramEnabled && userSettings.alertDown : true;
 
           if (botToken && chatId && isTelegramEnabled) {
-            const timeString = now.toLocaleTimeString("vi-VN", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-            });
 
             const msg = formatDownAlertTelegram({
               websiteName: website.name,
@@ -208,6 +214,54 @@ async function processWebsiteCheck(websiteId: string) {
                 errorMessage: sendRes.error,
               },
             });
+          }
+
+          // Send Email Alert if enabled or configured
+          const smtpHost = userSettings?.smtpHost || process.env.SMTP_HOST || "smtp.gmail.com";
+          const smtpPort = userSettings?.smtpPort || Number(process.env.SMTP_PORT) || 587;
+          const smtpUser = userSettings?.smtpUser || process.env.SMTP_USER;
+          const smtpPass = userSettings?.smtpPass || process.env.SMTP_PASSWORD;
+          const isEmailEnabled = userSettings ? (userSettings.emailEnabled !== false && userSettings.alertDown !== false) : true;
+          const recipientEmail = website.user?.email || userSettings?.fromEmail || process.env.FROM_EMAIL || smtpUser;
+
+          if (isEmailEnabled && smtpHost && smtpUser && smtpPass && recipientEmail) {
+            try {
+              const { subject, html } = formatDownAlertEmail({
+                websiteName: website.name,
+                url: website.url,
+                cause: result.errorMessage || (result.httpStatus ? `Mã lỗi HTTP ${result.httpStatus}` : "Không thể kết nối"),
+                timeString,
+                retryCount: nextFailures,
+                appUrl: APP_URL,
+              });
+
+              const emailRes = await sendSmtpEmail({
+                config: {
+                  host: smtpHost,
+                  port: smtpPort,
+                  user: smtpUser,
+                  pass: smtpPass,
+                  from: smtpUser,
+                },
+                to: recipientEmail,
+                subject,
+                html,
+              });
+
+              await prisma.notificationHistory.create({
+                data: {
+                  websiteId: website.id,
+                  incidentId: newIncident.id,
+                  eventType: "DOWN",
+                  channel: "EMAIL",
+                  messageBody: `[Email] ${subject}`,
+                  status: emailRes.success ? "SENT" : "FAILED",
+                  errorMessage: emailRes.error,
+                },
+              });
+            } catch (err: unknown) {
+              logger.error(`Failed to send DOWN email alert for ${website.name}: ${err}`);
+            }
           }
         }
       } else {
@@ -242,20 +296,21 @@ async function processWebsiteCheck(websiteId: string) {
           durationSeconds,
         });
 
+        const timeString = resolvedAt.toLocaleTimeString("vi-VN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+
         // Send Recovery Telegram Alert
         const botToken = userSettings?.telegramBotToken || process.env.TELEGRAM_BOT_TOKEN;
         const chatId = userSettings?.telegramChatId || process.env.TELEGRAM_CHAT_ID;
         const isTelegramEnabled = userSettings ? userSettings.telegramEnabled && userSettings.alertRecovery : true;
 
         if (botToken && chatId && isTelegramEnabled) {
-          const timeString = resolvedAt.toLocaleTimeString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          });
 
           const msg = formatRecoveryAlertTelegram({
             websiteName: website.name,
@@ -283,6 +338,54 @@ async function processWebsiteCheck(websiteId: string) {
               errorMessage: sendRes.error,
             },
           });
+        }
+
+        // Send Recovery Email Alert if enabled or configured
+        const smtpHost = userSettings?.smtpHost || process.env.SMTP_HOST || "smtp.gmail.com";
+        const smtpPort = userSettings?.smtpPort || Number(process.env.SMTP_PORT) || 587;
+        const smtpUser = userSettings?.smtpUser || process.env.SMTP_USER;
+        const smtpPass = userSettings?.smtpPass || process.env.SMTP_PASSWORD;
+        const isEmailEnabled = userSettings ? (userSettings.emailEnabled !== false && userSettings.alertRecovery !== false) : true;
+        const recipientEmail = website.user?.email || userSettings?.fromEmail || process.env.FROM_EMAIL || smtpUser;
+
+        if (isEmailEnabled && smtpHost && smtpUser && smtpPass && recipientEmail) {
+          try {
+            const { subject, html } = formatRecoveryAlertEmail({
+              websiteName: website.name,
+              url: website.url,
+              downtimeText: formatDuration(durationSeconds),
+              timeString,
+              responseTime: result.responseTimeMs,
+              appUrl: APP_URL,
+            });
+
+            const emailRes = await sendSmtpEmail({
+              config: {
+                host: smtpHost,
+                port: smtpPort,
+                user: smtpUser,
+                pass: smtpPass,
+                from: smtpUser,
+              },
+              to: recipientEmail,
+              subject,
+              html,
+            });
+
+            await prisma.notificationHistory.create({
+              data: {
+                websiteId: website.id,
+                incidentId: openIncident.id,
+                eventType: "RECOVERY",
+                channel: "EMAIL",
+                messageBody: `[Email] ${subject}`,
+                status: emailRes.success ? "SENT" : "FAILED",
+                errorMessage: emailRes.error,
+              },
+            });
+          } catch (err: unknown) {
+            logger.error(`Failed to send RECOVERY email alert for ${website.name}: ${err}`);
+          }
         }
       }
     }

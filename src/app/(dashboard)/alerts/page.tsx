@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Bell, Send, CheckCircle2, AlertTriangle, Shield, Clock, XCircle, Lock } from "lucide-react";
+import { Bell, Send, CheckCircle2, AlertTriangle, Shield, Clock, XCircle, Lock, Mail } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 interface AlertItem {
@@ -108,6 +108,7 @@ export default function AlertsPage() {
               const isDown = alert.eventType === "DOWN";
               const isRecovery = alert.eventType === "RECOVERY";
               const isSSL = alert.eventType === "SSL_WARNING";
+              const isTest = alert.eventType === "TEST";
 
               return (
                 <div key={alert.id} className="p-4 md:p-5 hover:bg-slate-50/70 transition flex items-start gap-4">
@@ -119,7 +120,9 @@ export default function AlertsPage() {
                         ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
                         : isSSL
                         ? "bg-amber-50 text-amber-600 border border-amber-100"
-                        : "bg-blue-50 text-blue-600 border border-blue-100"
+                        : isTest
+                        ? "bg-blue-50 text-blue-600 border border-blue-100"
+                        : "bg-slate-50 text-slate-600 border border-slate-100"
                     }`}
                   >
                     {isDown ? (
@@ -128,6 +131,12 @@ export default function AlertsPage() {
                       <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                     ) : isSSL ? (
                       <Lock className="w-5 h-5 text-amber-600" />
+                    ) : isTest ? (
+                      alert.channel === "EMAIL" ? (
+                        <Mail className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <Send className="w-5 h-5 text-sky-500" />
+                      )
                     ) : (
                       <AlertTriangle className="w-5 h-5 text-amber-600" />
                     )}
@@ -151,6 +160,8 @@ export default function AlertsPage() {
                               ? "text-emerald-600"
                               : isSSL
                               ? "text-amber-600"
+                              : isTest
+                              ? "text-blue-600"
                               : "text-slate-600"
                           }`}
                         >
@@ -160,6 +171,8 @@ export default function AlertsPage() {
                             ? "Đã phục hồi hoạt động"
                             : isSSL
                             ? "Chứng chỉ SSL sắp hết hạn"
+                            : isTest
+                            ? "Kiểm tra kết nối thông báo"
                             : "Cảnh báo an ninh"}
                         </span>
                       </div>
@@ -174,11 +187,19 @@ export default function AlertsPage() {
                     </p>
 
                     <div className="flex items-center gap-3 mt-2.5 text-[11px] text-slate-400 font-medium">
-                      <span className="flex items-center gap-1 text-blue-600">
-                        <Send className="w-3 h-3" /> Kênh: {alert.channel}
-                      </span>
+                      {alert.channel === "EMAIL" ? (
+                        <span className="flex items-center gap-1 text-indigo-600 font-semibold">
+                          <Mail className="w-3.5 h-3.5" /> Kênh: Email (SMTP)
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-blue-600 font-semibold">
+                          <Send className="w-3.5 h-3.5" /> Kênh: Telegram Bot
+                        </span>
+                      )}
                       <span>•</span>
-                      <span className="text-emerald-600">Trạng thái: Đã gửi (Sent)</span>
+                      <span className={alert.status === "SENT" ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
+                        Trạng thái: {alert.status === "SENT" ? "Đã gửi (Sent)" : "Thất bại (Failed)"}
+                      </span>
                     </div>
                   </div>
                 </div>
